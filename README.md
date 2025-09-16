@@ -1,4 +1,4 @@
-# EngageIQ (monorepo)
+# EngageIQ 
 
 This repository contains two main projects:
 
