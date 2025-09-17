@@ -2,6 +2,7 @@ import { Router } from 'express'
 import { spawn } from 'child_process'
 import path from 'path'
 import logger from '../logger.js'
+import { callRewriteProvider } from '../ai.js'
 import { loadUserByHeader, requireEngageIQAdmin } from '../middleware/auth.js'
 import { getContainer, database, getOrCreateContainer } from '../db.js'
 
@@ -216,17 +217,27 @@ router.post('/autotag', loadUserByHeader, async (req, res) => {
 // POST /admin/rewrite - simple rewrite helper (dev). Requires identification via x-user-id header.
 router.post('/rewrite', loadUserByHeader, async (req, res) => {
   try {
-    const { content } = req.body || {}
+    const { content, style } = req.body || {}
     if (!content || typeof content !== 'string') return res.status(400).json({ error: 'missing content' })
 
-    // Very small deterministic rewrite: collapse whitespace, trim, and capitalize sentences
-    let rewritten = content.replace(/\s+/g, ' ').trim()
-    // Capitalize first letter of each sentence (naive)
-    rewritten = rewritten.replace(/(?:^|[.!?]\s+)([a-z])/g, (m, p1) => m.slice(0, -1) + p1.toUpperCase())
+    // Try AI-backed rewrite first (AOAI / Foundry depending on config inside callRewriteProvider)
+    try {
+      const aiResult = await callRewriteProvider(content, typeof style === 'string' ? style : 'concise')
+      if (aiResult && String(aiResult).trim() && String(aiResult).trim() !== String(content).trim()) {
+        return res.json({ rewritten: String(aiResult).trim(), provider: 'ai' })
+      }
+      // If AI returned empty or identical content, fall through to deterministic fallback
+    } catch (aiErr) {
+      logger.error('/admin/rewrite: AI provider call failed: %o', aiErr)
+      // fall through to deterministic rewrite
+    }
 
+    // Deterministic fallback: collapse whitespace, trim, and capitalize sentences
+    let rewritten = content.replace(/\s+/g, ' ').trim()
+    rewritten = rewritten.replace(/(?:^|[.!?]\s+)([a-z])/g, (m, p1) => m.slice(0, -1) + p1.toUpperCase())
     return res.json({ rewritten })
   } catch (err) {
-    console.error('/admin/rewrite failed: %o', err)
+    logger.error('/admin/rewrite failed: %o', err)
     return res.status(500).json({ error: 'rewrite failed', details: (err as any)?.message || String(err) })
   }
 })
