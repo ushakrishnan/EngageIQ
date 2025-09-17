@@ -22,7 +22,7 @@ High-level technologies used in this monorepo:
 - Backend & scripts (backend/)
   - Node.js + TypeScript admin server (Express)
   - Azure Cosmos DB via `@azure/cosmos` for persistence (per-type containers)
-  - Asure OpenAI for post rewrites, recommendations and AI enhancements 
+  - Azure OpenAI and Foundry (including local) for post rewrites, recommendations and AI enhancements 
   - Logging: pino / pino-pretty
   - Dev tooling: ts-node, ts-node/esm, TypeScript compiler
   - All administrative scripts centralized under `backend/scripts/` (seeders, migrations, smoke tests)
