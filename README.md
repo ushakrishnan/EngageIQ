@@ -1,5 +1,24 @@
 # EngageIQ 
 
+A full‑stack reference implementation of a community engagement platform that demonstrates practical patterns for building social apps with robust client/server synchronization, idempotent reward systems, moderation tooling, and optional AI enhancements for content quality (rewrite and autotagging).
+
+What this solution does
+
+- Provides a React + TypeScript frontend and a Node.js + TypeScript admin backend focused on community features: posts, comments, follows, groups, and a karma system.
+- Demonstrates resilient server-side patterns: deterministic audit keys, idempotent award logic, and offline/unsynced persistence fallbacks.
+- Integrates AI-assisted tooling (Azure OpenAI / Foundry) for content rewrite and autotagging to help users improve post quality and discoverability.
+- Includes developer tooling: seeders, script library, and simple diagnostics to support local development and reproducible demo data.
+
+Problems this repository aims to solve
+
+- UI inconsistency between client and server when mutating social state (e.g., follows, karma) by showing optimistic updates and robust reconciliation.
+- Reward gaming and duplicate awards by using deterministic audit keys and session-level deduplication.
+- Low-quality or noisy user posts by offering AI-powered rewrite and autotag helpers.
+- Developer friction when setting up local demos, seeding data, or running administrative tasks by centralizing scripts under `backend/scripts`.
+
+GitHub description (one-liner):
+EngageIQ — lightweight community platform with karma, moderation, and AI-assisted rewrite & autotag tools.
+
 This repository contains two main projects:
 
 - frontend — Vite + React + TypeScript application (UI)
