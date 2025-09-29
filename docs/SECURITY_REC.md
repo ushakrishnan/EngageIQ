@@ -3,7 +3,12 @@
 _Last reviewed: 2025-09-29_
 
 ## Overview
-This document summarizes a thorough security review of the EngageIQ repository, covering both frontend and backend code, configuration, and operational practices. It provides:
+This document leads with one fundamental architectural boundary that guided the review: the frontend and backend are intentionally separated and responsibilities are cleanly split.
+
+- Frontend (React + Vite) is a thin, public-facing client: it does not contain secrets, it does not perform any database initialization or direct DB access, it does not store credentials in localStorage/sessionStorage, and it only communicates with the backend via documented API surfaces.
+- Backend (Node.js + TypeScript) is the authoritative server: it owns all secrets, database connections and migrations, administrative scripts, and enforcement of authentication and authorization rules.
+
+This document summarizes a thorough security review of the EngageIQ repository, covering code, configuration, and operational practices. It provides:
 - What was checked and how
 - Issues found and what needs changes
 - Must-do actions before production
@@ -80,6 +85,16 @@ This document summarizes a thorough security review of the EngageIQ repository, 
 - [ ] **Session security:** If using sessions or JWTs, use secure cookies, set proper expiry, and validate tokens on every request.
 - [ ] **Error handling:** Do not leak stack traces or internal errors to the client.
 - [ ] **Remove dev-only endpoints:** Remove or restrict any dev/test endpoints before deploying to production.
+
+TODO: JWT / Token hardening
+- Ensure all JWTs issued to clients or service accounts follow these minimum controls:
+  - Use asymmetric keys and JWKS (RS256/ES256) for production token verification; keep HS256 only for local tests with clearly separate secrets.
+  - Enforce short lifetimes for access tokens (minutes) and use refresh tokens or rotating service credentials for long-lived access where necessary.
+  - Validate audience (aud), issuer (iss), and expiry (exp) on every request. Reject tokens failing validation.
+  - Implement JWKS caching with key rotation handling and fallback behavior that errs closed if JWKS cannot be verified.
+  - Store any token signing secrets in a secure vault (Key Vault / Vault) and never in repo or frontend envs.
+  - Use secure, HttpOnly cookies for token transport where appropriate and set SameSite / Secure flags.
+  - Audit and rotate any signing keys that may have been exposed during development.
 
 ### What "Short-term" (2) and "Medium-term" (3) mean in practice
 
