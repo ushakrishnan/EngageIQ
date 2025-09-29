@@ -1,19 +1,19 @@
 #!/usr/bin/env node
 // Simple checker to find accidental secret exposure in frontend source/files.
-// Scans frontend/src and frontend env files for VITE_COSMOS_KEY and '@azure/cosmos'.
+// Scans frontend/src and frontend env files for COSMOS_* assignments and '@azure/cosmos'.
 const fs = require('fs')
 const path = require('path')
 
 const root = path.resolve(__dirname, '..')
 const frontend = path.join(root, 'frontend')
 
-// For env files: detect un-commented assignments like VITE_COSMOS_KEY=... (not commented)
-const envAssignmentRe = /^\s*VITE_COSMOS_KEY\s*=.*$/m
+// For env files: detect un-commented assignments like COSMOS_KEY=... or COSMOS_ENDPOINT=... (not commented)
+const envAssignmentRe = /^\s*(?:COSMOS_KEY|COSMOS_ENDPOINT|COSMOS_DATABASE_NAME|COSMOS_CONTAINER_NAME)\s*=.*$/m
 
 // For source files: detect dangerous imports or attempts to use the SDK in the browser
 const sourcePatterns = [
   /@azure\/cosmos/, // direct SDK import in frontend code — bad
-  /localStorage\.setItem\(['\"]VITE_COSMOS_KEY['\"]/, // writes to localStorage
+  /localStorage\.setItem\(['\"]COSMOS_KEY['\"]/, // writes to localStorage
 ]
 
 function walk(dir, cb) {
@@ -36,7 +36,7 @@ for (const f of envFiles) {
     const lines = txt.split(/\r?\n/)
     lines.forEach((ln, idx) => {
       if (envAssignmentRe.test(ln) && !ln.trim().startsWith('#')) {
-        found.push(`${p}:${idx+1}: un-commented VITE_COSMOS_KEY assignment`)
+        found.push(`${p}:${idx+1}: un-commented COSMOS_* assignment`) 
       }
     })
   }
@@ -58,8 +58,8 @@ if (fs.existsSync(srcDir)) {
 if (found.length) {
   console.error('\nFrontend secret check failed — potential exposures found:')
   found.forEach((l) => console.error('  ' + l))
-  console.error('\nPlease move secrets to backend/.env and remove VITE_COSMOS_KEY from frontend env files before committing.')
+  console.error('\nPlease move secrets to backend/.env and remove any COSMOS_* assignments from frontend env files before committing.')
   process.exitCode = 2
 } else {
-  console.log('Frontend secret check passed — no VITE_* keys or @azure/cosmos imports found in frontend sources or env files')
+  console.log('Frontend secret check passed — no COSMOS_* or @azure/cosmos imports found in frontend sources or env files')
 }

@@ -24,8 +24,8 @@ function loadEnvFromDotEnv() {
 loadEnvFromDotEnv()
 // Allow self-signed certs for localhost/emulator
 try {
-  if (process.env.VITE_COSMOS_ENDPOINT) {
-    const url = new URL(process.env.VITE_COSMOS_ENDPOINT)
+  if (process.env.COSMOS_ENDPOINT) {
+    const url = new URL(process.env.COSMOS_ENDPOINT)
     const localHosts = ['localhost', '127.0.0.1', '::1']
     if (localHosts.includes(url.hostname.toLowerCase())) {
       process.env.NODE_TLS_REJECT_UNAUTHORIZED = '0'
@@ -33,12 +33,12 @@ try {
   }
 } catch (e) { /* ignore */ }
 
-const endpoint = process.env.VITE_COSMOS_ENDPOINT
-const key = process.env.VITE_COSMOS_KEY
-const databaseName = process.env.VITE_COSMOS_DATABASE_NAME || 'EngageIQ'
+const endpoint = process.env.COSMOS_ENDPOINT
+const key = process.env.COSMOS_KEY
+const databaseName = process.env.COSMOS_DATABASE || process.env.COSMOS_DATABASE_NAME || 'EngageIQ'
 
 if (!endpoint || !key) {
-  console.error('Missing Cosmos env vars. Set VITE_COSMOS_ENDPOINT and VITE_COSMOS_KEY in .env or environment.')
+  console.error('Missing Cosmos env vars. Set COSMOS_ENDPOINT and COSMOS_KEY in .env or environment.')
   process.exit(1)
 }
 

@@ -44,9 +44,9 @@ class StartupChecker {
   async checkEnvFile() {
     try {
       const envContent = await fs.readFile(this.envPath, 'utf-8')
-      const hasProvider = envContent.includes('VITE_DATABASE_PROVIDER=')
-      const hasCosmosEndpoint = envContent.includes('VITE_COSMOS_ENDPOINT=') && envContent.match(/VITE_COSMOS_ENDPOINT=.+/)
-      const hasCosmosKey = envContent.includes('VITE_COSMOS_KEY=') && envContent.match(/VITE_COSMOS_KEY=.+/)
+  const hasProvider = envContent.includes('DATABASE_PROVIDER=')
+  const hasCosmosEndpoint = envContent.includes('COSMOS_ENDPOINT=')
+  const hasCosmosKey = envContent.includes('COSMOS_KEY=')
       const isCosmosConfigured = hasCosmosEndpoint && hasCosmosKey
       return hasProvider && isCosmosConfigured
     } catch {

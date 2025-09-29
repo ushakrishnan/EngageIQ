@@ -1,6 +1,9 @@
 import express from 'express'
 import bodyParser from 'body-parser'
 import adminRoutes from './routes/admin.js'
+import identifyActor from './middleware/identifyActor.js'
+import { requireEngageIQAdmin } from './middleware/auth.js'
+import auditLogger from './middleware/auditLogger.js'
 import internalErrors from './routes/internalErrors.js'
 import itemsRouter from './routes/items.js'
 import messagesRouter from './routes/messages.js'
@@ -18,7 +21,9 @@ app.use(bodyParser.json())
 app.use((req, res, next) => {
   res.setHeader('Access-Control-Allow-Origin', '*')
   res.setHeader('Access-Control-Allow-Methods', 'GET,POST,OPTIONS')
-  res.setHeader('Access-Control-Allow-Headers', 'Content-Type, x-user-id, Authorization')
+  // Do not expose dev-only x-user-id header in production
+  const allowHeaders = process.env.NODE_ENV === 'production' ? 'Content-Type, Authorization' : 'Content-Type, x-user-id, Authorization'
+  res.setHeader('Access-Control-Allow-Headers', allowHeaders)
   if (req.method === 'OPTIONS') return res.sendStatus(204)
   next()
 })
@@ -39,8 +44,13 @@ app.get('/ready', async (req, res) => {
 app.get('/metrics', metricsHandler)
 
 
-// admin routes
-app.use('/admin', adminRoutes)
+// admin routes: audit + require authenticated actor and admin role
+if (process.env.ADMIN_ENABLED === 'true') {
+  app.use('/admin', auditLogger, identifyActor, requireEngageIQAdmin, adminRoutes)
+} else {
+  // do not mount admin routes by default; require explicit opt-in
+  console.warn('ADMIN routes disabled; set ADMIN_ENABLED=true to enable /admin')
+}
 // internal endpoints used by client for dev-safe operations
 app.use('/internal', internalErrors)
 

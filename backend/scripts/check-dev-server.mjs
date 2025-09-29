@@ -3,7 +3,7 @@
 import http from 'node:http'
 import { lookup } from 'node:dns/promises'
 
-const port = parseInt(process.argv[2] || process.env.PORT || process.env.VITE_PORT || '5173', 10)
+const port = parseInt(process.argv[2] || process.env.PORT || process.env.DEV_SERVER_PORT || '5173', 10)
 
 async function checkServer(host = 'localhost', portOverride = port, maxAttempts = 12, delayMs = 1000) {
   // Resolve 'localhost' to IPv4 and target that address (avoid ::1/IPv6)

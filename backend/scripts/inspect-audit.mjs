@@ -1,9 +1,9 @@
 (async () => {
   try {
     const { CosmosClient } = await import('@azure/cosmos')
-    const endpoint = process.env.VITE_COSMOS_ENDPOINT || 'https://localhost:8081'
-    const key = process.env.VITE_COSMOS_KEY || 'FILL THE KEY HERE FOR TESTING'
-    const dbName = process.env.VITE_COSMOS_DATABASE_NAME || 'EngageIQ'
+  const endpoint = process.env.COSMOS_ENDPOINT || 'https://localhost:8081'
+  const key = process.env.COSMOS_KEY || 'FILL THE KEY HERE FOR TESTING'
+  const dbName = process.env.COSMOS_DATABASE || process.env.COSMOS_DATABASE_NAME || 'EngageIQ'
     const client = new CosmosClient({ endpoint, key })
     const db = client.database(dbName)
     const container = db.container('audit')

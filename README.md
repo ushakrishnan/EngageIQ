@@ -46,6 +46,20 @@ High-level technologies used in this monorepo:
   - Dev tooling: ts-node, ts-node/esm, TypeScript compiler
   - All administrative scripts centralized under `backend/scripts/` (seeders, migrations, smoke tests)
 
+  ## Migration summary: VITE_* cleanup (2025-09-29)
+
+  We completed a migration to remove server-side `VITE_*` environment variables and to centralize secrets in the backend.
+
+  - Server-side changes:
+    - Backend now uses canonical server env names (e.g., `ADMIN_SERVER_URL`, `DATABASE_PROVIDER`, `COSMOS_*`).
+    - `backend/src/config.ts` was updated and `backend/dist` rebuilt so compiled artifacts no longer fall back to any `VITE_*` providers.
+    - Backend scripts (`backend/scripts/*`) were updated to use `ADMIN_SERVER_URL` and `DEV_SERVER_PORT` where appropriate.
+  - Frontend changes:
+    - All client-facing Vite variables remain in `frontend/.env.example` and are explicitly non-secret.
+    - The frontend no longer contains any DB setup logic or uses Cosmos/AOAI keys.
+
+  See `docs/SECURITY_REC.md` and `docs/scriptsDocumentation.md` for a full summary and next steps.
+
 - Dev & infra
   - dotenv for local env loading; cross-env used in npm scripts
   - Seed & migration helpers in `backend/scripts/` (see `docs/scriptsDocumentation.md`)
@@ -116,14 +130,14 @@ Current frontend env keys (place in `frontend/.env` or use `.env.development` / 
 - VITE_ENABLE_ANALYTICS   # true/false (feature flag for analytics)
 - VITE_APP_VERSION        # build/release tag shown in UI
 - VITE_API_BASE_URL       # backend API base URL (e.g. http://localhost:4000)
-- VITE_ADMIN_SERVER_URL   # optional admin server URL used by some admin features
+  - VITE_ADMIN_SERVER_URL   # optional admin server URL used by some admin features (frontend-only)
+  - ADMIN_SERVER_URL        # canonical server-side admin URL used by backend scripts and tooling
 
 Notes and security guidance:
 
 - The frontend intentionally no longer reads or exposes any database provider
   configuration (Cosmos endpoint/key, database/container names). All
-  database credentials and setup live in the backend. If you see `VITE_COSMOS_*`
-  variables in historical docs or scripts, keep those values only in `backend/.env`.
+  database credentials and setup live in the backend. Historical references to VITE_COSMOS_* may exist in old docs; treat them as legacy and keep secrets only in `backend/.env`.
 
 - DO NOT put production secrets (Cosmos keys, Azure OpenAI keys, etc.) in any
   `frontend/.env` file. Anything prefixed with `VITE_` is bundled into the
@@ -161,9 +175,10 @@ Do NOT add production secrets to `frontend/.env`; keep credentials in `backend/.
 Backend (server and scripts): put a `.env` file in `backend/` (or set env variables in your environment).
 
 - Typical backend variables used by scripts and server:
-  - VITE_COSMOS_ENDPOINT
-  - VITE_COSMOS_KEY
-  - VITE_COSMOS_DATABASE_NAME
+  - DATABASE_PROVIDER
+  - COSMOS_ENDPOINT
+  - COSMOS_KEY
+  - COSMOS_DATABASE (or COSMOS_DATABASE_NAME)
   - AUTOTAG_PROVIDER (optional)
   - AOAI_ENDPOINT, AOAI_KEY, AOAI_DEPLOYMENT, AOAI_API_VERSION (if using Azure OpenAI/Foundry)
 

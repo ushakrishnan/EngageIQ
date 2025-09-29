@@ -34,7 +34,7 @@ This document describes the utility scripts under the `scripts/` folder. Each en
   - `node ./scripts/setup.mjs`
   - Called by developers or the `dev-server.mjs` wrapper when setup is missing.
 - Environment:
-  - Writes: `VITE_DATABASE_PROVIDER`, `VITE_COSMOS_ENDPOINT`, `VITE_COSMOS_DATABASE_NAME`, etc.
+  - Writes: `DATABASE_PROVIDER`, `COSMOS_ENDPOINT`, `COSMOS_DATABASE` (or `COSMOS_DATABASE_NAME`), etc.
   - Note: Production Cosmos keys (primary/secondary) must be stored in the backend `.env` or a managed secrets store. These scripts run in a backend context and expect secrets to be available to the process via `process.env` or a backend `.env` file. Do NOT place production keys in frontend `VITE_` variables — anything prefixed with `VITE_` is bundled into the client at build time and may be exposed.
 - Notes:
   - Interactive; overwrites `.env` if user confirms. Runs `scripts/create-containers-and-seed.mjs` if seeding requested.
@@ -53,7 +53,7 @@ This document describes the utility scripts under the `scripts/` folder. Each en
 - Purpose: Quick, minimal CLI to populate `.env` with essential Cosmos settings (fast path).
 - Usage: `node ./scripts/quick-setup-cosmos.mjs`
 - Environment:
-  - Writes: `VITE_DATABASE_PROVIDER=cosmos`, `VITE_COSMOS_ENDPOINT`, `VITE_COSMOS_KEY`, `VITE_COSMOS_DATABASE_NAME`, `VITE_COSMOS_CONTAINER_NAME`
+  - Writes: `DATABASE_PROVIDER=cosmos`, `COSMOS_ENDPOINT`, `COSMOS_KEY`, `COSMOS_DATABASE`, `COSMOS_CONTAINER`
 - Notes: Non-interactive scripts may read `.env` to preserve existing values.
 
 ---
@@ -66,7 +66,7 @@ This document describes the utility scripts under the `scripts/` folder. Each en
 - Purpose: Ensure required per-type containers exist in Cosmos and then run the seeder.
 - Usage: `node ./scripts/create-containers-and-seed.mjs`
   - Environment:
-  - `VITE_COSMOS_ENDPOINT` (optional for local emulators). Server-side scripts/readers require the Cosmos key via backend `.env` (or process.env). The scripts assume they run in the backend context where secrets are available.
+  - `COSMOS_ENDPOINT` (optional for local emulators). Server-side scripts/readers require the Cosmos key via backend `.env` (or process.env). The scripts assume they run in the backend context where secrets are available.
 - Notes:
   - This script supports local emulator (will temporarily set `NODE_TLS_REJECT_UNAUTHORIZED=0` when running against localhost).
   - Invokes `./seed-data.mjs` to populate sample data.
@@ -112,7 +112,7 @@ This document describes the utility scripts under the `scripts/` folder. Each en
 ---
 
 ### `scripts/migrate-data-to-containers.mjs`
-  - `VITE_COSMOS_ENDPOINT`, `VITE_COSMOS_KEY`, `VITE_COSMOS_DATABASE_NAME`, and optionally `VITE_COSMOS_CONTAINER_NAME` (source `data` container)
+  - `COSMOS_ENDPOINT`, `COSMOS_KEY`, `COSMOS_DATABASE` (or `COSMOS_DATABASE_NAME`), and optionally `COSMOS_CONTAINER` (source `data` container)
   - Ensures per-type containers exist and upserts converted documents. Good for converting older schemas to the current per-type model.
   - Not destructive (does not delete source items), but you should back up data first.
 
@@ -180,7 +180,7 @@ This document describes the utility scripts under the `scripts/` folder. Each en
 ### `scripts/validate-cosmos.mjs`
 - Purpose: Validate Cosmos setup by performing test write/read/delete operations and confirming database/container exist.
 - Usage: `node ./scripts/validate-cosmos.mjs`
-- Environment: `VITE_COSMOS_ENDPOINT`, `VITE_COSMOS_KEY`, `VITE_COSMOS_DATABASE_NAME`, `VITE_COSMOS_CONTAINER_NAME`
+- Environment: `COSMOS_ENDPOINT`, `COSMOS_KEY`, `COSMOS_DATABASE` (or `COSMOS_DATABASE_NAME`), `COSMOS_CONTAINER`
 - Notes: Useful for CI or troubleshooting connectivity/auth issues.
 
 ---
@@ -226,18 +226,14 @@ This document describes the utility scripts under the `scripts/` folder. Each en
 ---
 
 ### `scripts/get-audit-logs.mjs` and `scripts/inspect-audit.mjs`
-- Purpose:
   - `get-audit-logs.mjs` calls the local admin server (`/admin/audit-logs`) to fetch the last audit logs via HTTP.
   - `inspect-audit.mjs` connects directly to Cosmos and reads from the `audit` container to show recent audit events.
-- Usage:
   - `node ./scripts/get-audit-logs.mjs` (requires admin server running: `VITE_ADMIN_SERVER_URL`, default `http://localhost:4000`)
-  - `node ./scripts/inspect-audit.mjs` (requires Cosmos env vars)
+  - `node ./scripts/get-audit-logs.mjs` (requires admin server running: use `ADMIN_SERVER_URL` or run the admin server locally; default `http://localhost:4000`)
 - Notes: Both are read-only helpers for observability and troubleshooting.
 
----
-
-### `scripts/write-audit-now.mjs` and `scripts/write-error-now.mjs`
-- Purpose: Small test helpers to write an audit or an error document into their respective containers and display recent entries.
+  - `ADMIN_SERVER_URL` or run the admin server locally (defaults to `http://localhost:4000`)
+ Notes: This script runs in a backend/script context and therefore uses the canonical `ADMIN_SERVER_URL` environment variable rather than a `VITE_` prefixed frontend variable.
 - Usage:
   - `node ./scripts/write-audit-now.mjs`
   - `node ./scripts/write-error-now.mjs`

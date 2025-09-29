@@ -56,35 +56,35 @@ async function checkSetupStatus() {
 
     console.log(chalk.green('✅ .env file found'))
     
-    const provider = envVars.VITE_DATABASE_PROVIDER
+    const provider = envVars.DATABASE_PROVIDER
     if (!provider) {
       console.log(chalk.red('❌ Database provider not set'))
-      console.log(chalk.yellow('   Set VITE_DATABASE_PROVIDER to "cosmos"\n'))
+      console.log(chalk.yellow('   Set DATABASE_PROVIDER to "cosmos"\n'))
       return false
     }
-    
+
     console.log(chalk.green(`✅ Database provider: ${provider}`))
-    
+
     if (provider === 'cosmos') {
-      const endpoint = envVars.VITE_COSMOS_ENDPOINT
-      const key = envVars.VITE_COSMOS_KEY
-      const dbName = envVars.VITE_COSMOS_DATABASE_NAME
-      
+      const endpoint = envVars.COSMOS_ENDPOINT
+      const key = envVars.COSMOS_KEY
+      const dbName = envVars.COSMOS_DATABASE || envVars.COSMOS_DATABASE_NAME
+
       if (!endpoint || !key) {
         console.log(chalk.red('❌ Cosmos DB configuration incomplete'))
         console.log(chalk.yellow('   Missing required Cosmos DB credentials\n'))
         console.log(chalk.blue('   Required variables:'))
-        console.log(chalk.white('   - VITE_COSMOS_ENDPOINT'))
-        console.log(chalk.white('   - VITE_COSMOS_KEY\n'))
+        console.log(chalk.white('   - COSMOS_ENDPOINT'))
+        console.log(chalk.white('   - COSMOS_KEY\n'))
         return false
       }
-      
+
       console.log(chalk.green('✅ Cosmos DB configuration complete'))
       console.log(chalk.white(`   Endpoint: ${endpoint}`))
       console.log(chalk.white(`   Database: ${dbName || 'EngageIQ'}`))
       console.log(chalk.white(`   Key: ${key.substring(0, 20)}...\n`))
     } else {
-      console.log(chalk.red('❌ Unsupported database provider. Please set VITE_DATABASE_PROVIDER to "cosmos"'))
+      console.log(chalk.red('❌ Unsupported database provider. Please set DATABASE_PROVIDER to "cosmos"'))
       return false
     }
     

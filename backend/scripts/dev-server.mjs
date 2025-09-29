@@ -26,11 +26,11 @@ class DevServerLauncher {
   async isConfigured() {
     try {
       // Check if .env exists and has basic configuration
-      const envContent = await fs.readFile(this.envPath, 'utf-8')
-      const hasProvider = envContent.includes('VITE_DATABASE_PROVIDER=')
-      const hasCredentials = envContent.includes('VITE_COSMOS_ENDPOINT=')
-      
-      return hasProvider && hasCredentials
+  const envContent = await fs.readFile(this.envPath, 'utf-8')
+  const hasProvider = envContent.includes('DATABASE_PROVIDER=')
+  const hasCredentials = envContent.includes('COSMOS_ENDPOINT=')
+
+  return hasProvider && hasCredentials
     } catch {
       return false
     }

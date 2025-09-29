@@ -74,7 +74,7 @@ export const config: Config = {
 
 // No runtime validation is performed here. Backend is authoritative for
 // database configuration and secrets. Frontend may include a local
-// emulator endpoint (VITE_COSMOS_ENDPOINT) when useful for development,
+// emulator endpoint (COSMOS_ENDPOINT) when useful for development — database credentials belong on the backend
 // but we purposely avoid runtime checks or warnings in the client.
 
 /**

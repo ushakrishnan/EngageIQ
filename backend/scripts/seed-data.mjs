@@ -438,12 +438,12 @@ async function seedCosmosDB(seedLevel) {
   const { CosmosClient } = await import('@azure/cosmos')
   
   // Get credentials from environment
-  const endpoint = process.env.VITE_COSMOS_ENDPOINT
-  const key = process.env.VITE_COSMOS_KEY
-  const databaseName = process.env.VITE_COSMOS_DATABASE_NAME || 'EngageIQ'
-  
+  const endpoint = process.env.COSMOS_ENDPOINT
+  const key = process.env.COSMOS_KEY
+  const databaseName = process.env.COSMOS_DATABASE || process.env.COSMOS_DATABASE_NAME || 'EngageIQ'
+
   if (!endpoint || !key) {
-    throw new Error('Missing Cosmos DB credentials')
+    throw new Error('Missing Cosmos DB credentials. Set COSMOS_ENDPOINT and COSMOS_KEY in environment or backend/.env')
   }
   
   const client = new CosmosClient({ endpoint, key })

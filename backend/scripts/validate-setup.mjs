@@ -37,19 +37,19 @@ class SetupValidator {
       })
       
       // Check required variables
-      const provider = envVars.VITE_DATABASE_PROVIDER
-      if (!provider) {
-        throw new Error('VITE_DATABASE_PROVIDER not set')
+  const provider = envVars.DATABASE_PROVIDER
+  if (!provider) {
+    throw new Error('DATABASE_PROVIDER not set')
       }
       
       console.log(chalk.green(`  ✅ Database provider: ${provider}`))
       
       if (provider === 'cosmos') {
-        if (!envVars.VITE_COSMOS_ENDPOINT) throw new Error('VITE_COSMOS_ENDPOINT not set')
-        if (!envVars.VITE_COSMOS_KEY) throw new Error('VITE_COSMOS_KEY not set')
+  if (!envVars.COSMOS_ENDPOINT) throw new Error('COSMOS_ENDPOINT not set')
+  if (!envVars.COSMOS_KEY) throw new Error('COSMOS_KEY not set')
         console.log(chalk.green('  ✅ Cosmos DB configuration valid'))
       } else {
-        throw new Error('Unsupported database provider. Set VITE_DATABASE_PROVIDER to "cosmos"')
+  throw new Error('Unsupported database provider. Set DATABASE_PROVIDER to "cosmos"')
       }
       
       return true

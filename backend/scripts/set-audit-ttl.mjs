@@ -24,9 +24,9 @@ async function main() {
   await loadEnv()
   const { CosmosClient } = await import('@azure/cosmos')
 
-  const endpoint = process.env.VITE_COSMOS_ENDPOINT || process.env.VITE_COSMOS_ENDPOINT
-  const key = process.env.VITE_COSMOS_KEY || process.env.VITE_COSMOS_KEY
-  const dbName = process.env.VITE_COSMOS_DATABASE_NAME || 'EngageIQ'
+  const endpoint = process.env.COSMOS_ENDPOINT
+  const key = process.env.COSMOS_KEY
+  const dbName = process.env.COSMOS_DATABASE || process.env.COSMOS_DATABASE_NAME || 'EngageIQ'
 
   if (!endpoint || !key) {
     console.error('Cosmos DB config missing in environment')

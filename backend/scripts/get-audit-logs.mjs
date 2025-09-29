@@ -1,6 +1,6 @@
 (async () => {
   try {
-    const adminServer = process.env.VITE_ADMIN_SERVER_URL || 'http://localhost:4000'
+  const adminServer = process.env.ADMIN_SERVER_URL || 'http://localhost:4000'
     const response = await fetch(`${adminServer}/admin/audit-logs`, {
       method: 'GET',
       headers: {

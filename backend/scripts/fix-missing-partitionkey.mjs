@@ -12,7 +12,7 @@
  *   node ./scripts/fix-missing-partitionkey.mjs --apply # Apply fixes
  *
  * Environment variables (same as other scripts):
- *   VITE_COSMOS_ENDPOINT, VITE_COSMOS_KEY, VITE_COSMOS_DATABASE_NAME, VITE_COSMOS_CONTAINER_NAME
+ *   COSMOS_ENDPOINT, COSMOS_KEY, COSMOS_DATABASE_NAME, COSMOS_CONTAINER_NAME
  */
 
 import chalk from 'chalk'
@@ -29,10 +29,10 @@ class FixMissingPartitionService {
     this.database = null
     this.container = null
     this.config = {
-      endpoint: getEnvVar('VITE_COSMOS_ENDPOINT'),
-      key: getEnvVar('VITE_COSMOS_KEY'),
-      databaseName: getEnvVar('VITE_COSMOS_DATABASE_NAME', 'EngageIQ'),
-      containerName: getEnvVar('VITE_COSMOS_CONTAINER_NAME', 'data')
+  endpoint: getEnvVar('COSMOS_ENDPOINT'),
+  key: getEnvVar('COSMOS_KEY'),
+  databaseName: getEnvVar('COSMOS_DATABASE', getEnvVar('COSMOS_DATABASE_NAME', 'EngageIQ')),
+  containerName: getEnvVar('COSMOS_CONTAINER', getEnvVar('COSMOS_CONTAINER_NAME', 'data'))
     }
   }
 

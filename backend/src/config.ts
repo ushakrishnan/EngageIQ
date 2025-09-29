@@ -24,12 +24,13 @@ export interface Config {
 export const config: Config = {
   port: process.env.PORT ? parseInt(process.env.PORT, 10) : 4000,
   database: {
-    provider: process.env.VITE_DATABASE_PROVIDER || 'cosmos',
+  // Prefer server-side env names (DATABASE_PROVIDER / COSMOS_*)
+  provider: process.env.DATABASE_PROVIDER || 'cosmos',
     cosmos: {
-      endpoint: process.env.VITE_COSMOS_ENDPOINT,
-      key: process.env.VITE_COSMOS_KEY,
-      databaseName: process.env.VITE_COSMOS_DATABASE_NAME || 'EngageIQ',
-      containerName: process.env.VITE_COSMOS_CONTAINER_NAME || 'data'
+      endpoint: process.env.COSMOS_ENDPOINT,
+      key: process.env.COSMOS_KEY,
+      databaseName: process.env.COSMOS_DATABASE || process.env.COSMOS_DATABASE_NAME || 'EngageIQ',
+      containerName: process.env.COSMOS_CONTAINER || process.env.COSMOS_CONTAINER_NAME || 'data'
     }
   },
   autotagProvider: process.env.AUTOTAG_PROVIDER

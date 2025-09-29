@@ -19,12 +19,12 @@ const getEnvVar = (key, fallback = '') => {
 // Create config object directly
 const config = {
   database: {
-    provider: getEnvVar('VITE_DATABASE_PROVIDER', 'cosmos'),
+    provider: getEnvVar('DATABASE_PROVIDER', 'cosmos'),
     cosmos: {
-      endpoint: getEnvVar('VITE_COSMOS_ENDPOINT'),
-      key: getEnvVar('VITE_COSMOS_KEY'),
-      databaseName: getEnvVar('VITE_COSMOS_DATABASE_NAME', 'EngageIQ'),
-      containerName: getEnvVar('VITE_COSMOS_CONTAINER_NAME', 'data')
+      endpoint: getEnvVar('COSMOS_ENDPOINT'),
+      key: getEnvVar('COSMOS_KEY'),
+      databaseName: getEnvVar('COSMOS_DATABASE', getEnvVar('COSMOS_DATABASE_NAME', 'EngageIQ')),
+      containerName: getEnvVar('COSMOS_CONTAINER', getEnvVar('COSMOS_CONTAINER_NAME', 'data'))
     }
   }
 }
@@ -36,7 +36,7 @@ async function validateCosmosSetup() {
   if (config.database.provider !== 'cosmos') {
     console.log(chalk.yellow('⚠️  Database provider is not set to "cosmos"'))
     console.log(chalk.gray(`   Current provider: ${config.database.provider}`))
-    console.log(chalk.gray('   Set VITE_DATABASE_PROVIDER=cosmos in your .env file'))
+  console.log(chalk.gray('   Set DATABASE_PROVIDER=cosmos in your .env file'))
     return false
   }
 
@@ -48,13 +48,13 @@ async function validateCosmosSetup() {
   console.log('\n📋 Configuration Check:')
   
   if (!endpoint) {
-    console.log(chalk.red('❌ VITE_COSMOS_ENDPOINT is not set'))
+    console.log(chalk.red('❌ COSMOS_ENDPOINT is not set'))
     return false
   }
   console.log(chalk.green(`✅ Endpoint: ${endpoint.substring(0, 30)}...`))
 
   if (!key) {
-    console.log(chalk.red('❌ VITE_COSMOS_KEY is not set'))
+    console.log(chalk.red('❌ COSMOS_KEY is not set'))
     return false
   }
   console.log(chalk.green(`✅ Key: ${key.substring(0, 10)}...************`))
@@ -156,7 +156,7 @@ async function validateCosmosSetup() {
     
     if (error.code === 401) {
       console.log(chalk.yellow('\n💡 Tips for 401 Unauthorized errors:'))
-      console.log(chalk.gray('   - Check that your VITE_COSMOS_KEY is the PRIMARY key'))
+  console.log(chalk.gray('   - Check that your COSMOS_KEY is the PRIMARY key'))
       console.log(chalk.gray('   - Ensure the key was copied correctly without extra spaces'))
       console.log(chalk.gray('   - Verify the endpoint URL is correct'))
     } else if (error.code === 403) {

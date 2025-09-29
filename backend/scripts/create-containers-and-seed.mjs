@@ -31,11 +31,12 @@ async function main() {
   const envPath = path.join(process.cwd(), '.env')
   loadEnvFile(envPath)
 
-  const endpoint = process.env.VITE_COSMOS_ENDPOINT
-  const key = process.env.VITE_COSMOS_KEY
-  const dbName = process.env.VITE_COSMOS_DATABASE_NAME || 'EngageIQ'
+  // prefer server-side COSMOS_* envs, fall back to legacy VITE_* for local dev
+  const endpoint = process.env.COSMOS_ENDPOINT
+  const key = process.env.COSMOS_KEY
+  const dbName = process.env.COSMOS_DATABASE || process.env.COSMOS_DATABASE_NAME || 'EngageIQ'
   if (!endpoint || !key) {
-    console.error('Missing VITE_COSMOS_ENDPOINT or VITE_COSMOS_KEY in .env')
+  console.error('Missing COSMOS_ENDPOINT or COSMOS_KEY in .env')
     process.exit(2)
   }
 

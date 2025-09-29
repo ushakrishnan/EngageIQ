@@ -16,8 +16,19 @@ declare global {
 }
 
 export async function loadUserByHeader(req: Request, res: Response, next: NextFunction) {
+  // If a token-derived user is already attached (from verifyJwt), prefer it
+  const tokenUser = (req as any).user
+  if (tokenUser && (tokenUser.sub || tokenUser.userId || tokenUser.id)) {
+    req.actor = { id: String(tokenUser.sub || tokenUser.userId || tokenUser.id), data: tokenUser }
+    return next()
+  }
+
   const actorId = req.header('x-user-id') as string | undefined
-  if (!actorId) return res.status(401).json({ error: 'Missing x-user-id header (dev mode).' })
+  if (!actorId) {
+    // In production we should not accept x-user-id header as identity
+    if (process.env.NODE_ENV === 'production') return res.status(401).json({ error: 'Missing authentication' })
+    return res.status(401).json({ error: 'Missing x-user-id header (dev mode).' })
+  }
 
   try {
     // Try per-type 'users' container first
@@ -53,6 +64,16 @@ export async function loadUserByHeader(req: Request, res: Response, next: NextFu
 
 export function requireEngageIQAdmin(req: Request, res: Response, next: NextFunction) {
   try {
+    // Check token-derived claims first (if present)
+    const tokenUser = (req as any).user
+    if (tokenUser) {
+      const tokenRoles = tokenUser.roles || tokenUser.role || tokenUser['roles'] || tokenUser['http://schemas.microsoft.com/ws/2008/06/identity/claims/role']
+      // tokenRoles can be string or array
+      const rArray = Array.isArray(tokenRoles) ? tokenRoles : (typeof tokenRoles === 'string' ? [tokenRoles] : [])
+      if (Array.isArray(rArray) && rArray.includes('engageiq_admin')) return next()
+      return res.status(403).json({ error: 'Forbidden: admin role required' })
+    }
+
     if (!req.actor) return res.status(401).json({ error: 'Not identified' })
     const roles = (req.actor.data && req.actor.data.roles) || []
     if (!Array.isArray(roles) || !roles.includes('engageiq_admin')) {

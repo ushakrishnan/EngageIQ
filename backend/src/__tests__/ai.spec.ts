@@ -1,5 +1,5 @@
 import assert from 'node:assert/strict'
-import { describe, it } from 'node:test'
+import { describe, it } from '@jest/globals'
 import * as ai from '../ai.js'
 
 describe('AI module', () => {
@@ -20,20 +20,22 @@ describe('AI module', () => {
     process.env.AOAI_EMBEDDING_DEPLOYMENT = 'd'
 
     const origFetch = (globalThis as any).fetch
-    (globalThis as any).fetch = async () => ({
-      json: async () => ({ data: [{ embedding: [1, 2, 3] }, { embedding: [4, 5, 6] }] }),
-      text: async () => JSON.stringify({ data: [{ embedding: [1, 2, 3] }, { embedding: [4, 5, 6] }] }),
-      ok: true,
-      status: 200
-    })
+    try {
+      (globalThis as any).fetch = async (_url?: any, _init?: any) => ({
+        json: async () => ({ data: [{ embedding: [1, 2, 3] }, { embedding: [4, 5, 6] }] }),
+        text: async () => JSON.stringify({ data: [{ embedding: [1, 2, 3] }, { embedding: [4, 5, 6] }] }),
+        ok: true,
+        status: 200
+      })
 
-    const res = await ai.computeVectors(undefined, tagsContainer as any)
-    assert.strictEqual(res.ok, true)
-    assert.strictEqual(res.processed, 2)
-    assert.strictEqual(saved.length, 2)
-    assert.deepStrictEqual(saved[0].data.vector, [1, 2, 3])
-
-    ;(globalThis as any).fetch = origFetch
+      const res = await ai.computeVectors(undefined, tagsContainer as any)
+      assert.strictEqual(res.ok, true)
+      assert.strictEqual(res.processed, 2)
+      assert.strictEqual(saved.length, 2)
+      assert.deepStrictEqual(saved[0].data.vector, [1, 2, 3])
+    } finally {
+      ;(globalThis as any).fetch = origFetch
+    }
   })
 
   it('callAutotagProvider returns parsed tags from AOAI', async () => {
@@ -42,15 +44,17 @@ describe('AI module', () => {
     process.env.AOAI_KEY = 'key'
 
     const origFetch = (globalThis as any).fetch
-    (globalThis as any).fetch = async () => ({
-      text: async () => '["tagA","tagB"]',
-      ok: true
-    })
+    try {
+      (globalThis as any).fetch = async (_url?: any, _init?: any) => ({
+        text: async () => '["tagA","tagB"]',
+        ok: true
+      })
 
-    const tags = await ai.callAutotagProvider('some content', 3)
-    assert.deepStrictEqual(tags, ['tagA', 'tagB'])
-
-    ;(globalThis as any).fetch = origFetch
+      const tags = await ai.callAutotagProvider('some content', 3)
+      assert.deepStrictEqual(tags, ['tagA', 'tagB'])
+    } finally {
+      ;(globalThis as any).fetch = origFetch
+    }
   })
 
   it('callRewriteProvider returns rewritten text from AOAI', async () => {
@@ -59,15 +63,17 @@ describe('AI module', () => {
     process.env.AOAI_KEY = 'key'
 
     const origFetch = (globalThis as any).fetch
-    (globalThis as any).fetch = async () => ({
-      json: async () => ({ choices: [{ message: { content: 'rewritten text' } }] }),
-      ok: true,
-      text: async () => JSON.stringify({ choices: [{ message: { content: 'rewritten text' } }] })
-    })
+    try {
+      (globalThis as any).fetch = async (_url?: any, _init?: any) => ({
+        json: async () => ({ choices: [{ message: { content: 'rewritten text' } }] }),
+        ok: true,
+        text: async () => JSON.stringify({ choices: [{ message: { content: 'rewritten text' } }] })
+      })
 
-    const out = await ai.callRewriteProvider('original text', 'polished')
-    assert.strictEqual(out, 'rewritten text')
-
-    ;(globalThis as any).fetch = origFetch
+      const out = await ai.callRewriteProvider('original text', 'polished')
+      assert.strictEqual(out, 'rewritten text')
+    } finally {
+      ;(globalThis as any).fetch = origFetch
+    }
   })
 })
