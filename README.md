@@ -119,6 +119,17 @@ Frontend (Vite): environment variables used in the UI must be prefixed with `VIT
   - VITE_API_BASE_URL
   - VITE_APP_VERSION
 
+  NOTE: Do NOT put production secrets (Cosmos keys, AOAI keys, etc.) in these
+  frontend env files. Keep secrets in `backend/.env` or a secrets manager; the
+  frontend should only include non-sensitive, client-exposed values.
+
+  Important security note: Do NOT store production secrets (Cosmos primary keys,
+  Azure OpenAI keys, or other credentials) in frontend Vite env files. Anything
+  prefixed with `VITE_` is bundled at build time and can be exposed from the
+  client. Keep all secrets in `backend/.env` or a managed secrets store. A
+  sample safe frontend env is provided at `frontend/.env.safe` which lists only
+  non-secret configuration that the client may read.
+
 Backend (server and scripts): put a `.env` file in `backend/` (or set env variables in your environment).
 
 - Typical backend variables used by scripts and server:

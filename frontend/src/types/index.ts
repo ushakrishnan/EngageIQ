@@ -132,6 +132,8 @@ export interface Group {
 export interface User extends UnsyncedPayload {
   id: string
   name: string
+  // optional short handle/username (e.g. 'alicej')
+  handle?: string
   email: string
   avatar: string
   bio: string

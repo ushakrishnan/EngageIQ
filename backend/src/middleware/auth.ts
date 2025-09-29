@@ -1,5 +1,6 @@
 import { Request, Response, NextFunction } from 'express'
 import { getContainer, getOrCreateContainer } from '../db.js'
+import logger from '../logger.js'
 
 export interface Actor {
   id: string
@@ -45,7 +46,7 @@ export async function loadUserByHeader(req: Request, res: Response, next: NextFu
 
     return res.status(401).json({ error: 'Actor not found' })
   } catch (err) {
-    console.error('loadUserByHeader error', err)
+    logger.error('loadUserByHeader error: %o', err)
     return res.status(500).json({ error: 'Failed to read actor' })
   }
 }
@@ -59,7 +60,7 @@ export function requireEngageIQAdmin(req: Request, res: Response, next: NextFunc
     }
     return next()
   } catch (err) {
-    console.error('requireEngageIQAdmin error', err)
+    logger.error('requireEngageIQAdmin error: %o', err)
     return res.status(500).json({ error: 'internal' })
   }
 }

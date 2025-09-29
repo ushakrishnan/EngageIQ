@@ -3,7 +3,9 @@ import { useState, useRef, useEffect } from 'react'
 import { Textarea } from '@/components/ui/textarea'
 import { MentionSuggestions } from '@/components/MentionSuggestions'
 import type { MentionableUser } from '@/lib/mentions'
-import { getCurrentMention, insertMention } from '@/lib/mentions'
+import { getCurrentMention, insertMention, searchMentionSuggestions } from '@/lib/mentions'
+
+type SuggestionWithMatches = { item: MentionableUser; matches?: unknown }
 
 interface MentionInputProps {
   value: string
@@ -33,7 +35,7 @@ export function MentionInput({
   const [showSuggestions, setShowSuggestions] = useState(false)
   const [suggestionPosition, setSuggestionPosition] = useState({ top: 0, left: 0 })
   const [currentMentionQuery, setCurrentMentionQuery] = useState('')
-  const inputRef = useRef<HTMLInputElement | HTMLTextAreaElement>(null)
+  const inputRef = useRef<HTMLInputElement | HTMLTextAreaElement | null>(null)
   const [cursorPosition, setCursorPosition] = useState(0)
 
   useEffect(() => {
@@ -52,9 +54,21 @@ export function MentionInput({
     // Check for mention trigger
     const mention = getCurrentMention(newValue, newCursorPosition)
     
-    if (mention && mention.query.length > 0) {
+    // Show suggestions when the cursor is inside a mention being typed.
+    // Allow an empty query (user typed just '@') so the suggestions list appears immediately.
+    if (mention) {
       setCurrentMentionQuery(mention.query)
       setShowSuggestions(true)
+      try {
+        // helpful debug: compute how many candidates match to make it obvious why nothing shows
+        const matches = searchMentionSuggestions(mention.query, users, currentUserId || '')
+        // only log when a debug flag is present in the URL to avoid noisy logs in production
+        if (typeof window !== 'undefined' && window.location && new URL(window.location.href).searchParams.get('debug_mentions') === '1') {
+          console.debug('[MentionInput] mention detected', { query: mention.query, cursor: newCursorPosition, matchesCount: matches.length, first5: matches.slice(0,5).map(m=>m.item?.name) })
+        }
+      } catch {
+        // ignore search errors for robustness
+      }
       updateSuggestionPosition()
     } else {
       setShowSuggestions(false)
@@ -63,13 +77,27 @@ export function MentionInput({
   }
 
   const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement | HTMLTextAreaElement>) => {
+    // Fallback: if user types the '@' character, open suggestions immediately (schedule after event loop)
+    if (e.key === '@') {
+      setTimeout(() => {
+        const el = inputRef.current as (HTMLInputElement | HTMLTextAreaElement | null)
+        const pos = el ? (typeof (el as HTMLInputElement).selectionStart === 'number' ? (el as HTMLInputElement).selectionStart! : 0) : 0
+        const mention = getCurrentMention(value, pos)
+        if (mention) {
+          setCurrentMentionQuery(mention.query)
+          setShowSuggestions(true)
+          updateSuggestionPosition()
+        }
+      }, 0)
+    }
+
     setCursorPosition(e.currentTarget.selectionStart || 0)
-    
+
     // If suggestions are showing, let MentionSuggestions handle navigation
     if (showSuggestions && ['ArrowDown', 'ArrowUp', 'Enter', 'Tab', 'Escape'].includes(e.key)) {
       return
     }
-    
+
     onKeyPress?.(e)
   }
 
@@ -132,21 +160,54 @@ export function MentionInput({
           onKeyDown={handleKeyDown}
           onFocus={handleInputFocus}
           onBlur={handleInputBlur}
+          autoComplete="off"
+          spellCheck={false}
           placeholder={placeholder}
           className={className}
           disabled={disabled}
         />
         
-        {showSuggestions && (
-          <MentionSuggestions
-            query={currentMentionQuery}
-            users={users}
-            currentUserId={currentUserId || ''}
-            onSelectMention={handleSelectMention}
-            onClose={handleCloseSuggestions}
-            position={suggestionPosition}
-          />
-        )}
+        {showSuggestions && (() => {
+          // compute suggestion results and fallbacks
+          let suggestionCount = 0
+          let suggestionsOverride = undefined as undefined | SuggestionWithMatches[]
+          try {
+            const matches = searchMentionSuggestions(currentMentionQuery, users, currentUserId || '')
+            suggestionCount = matches.length
+            if (matches.length === 0 && users && users.length > 0) {
+              // fallback: top-5 from users (excluding current)
+              const top = users.filter(u => u.id !== (currentUserId || '')).slice(0, 5).map(u => ({ item: u }))
+              suggestionsOverride = top
+              suggestionCount = top.length
+            }
+          } catch {
+            suggestionCount = (users && users.length) ? Math.min(5, users.length) : 0
+          }
+
+          const showDebug = typeof window !== 'undefined' && window.location && new URL(window.location.href).searchParams.get('debug_mentions') === '1'
+
+          return (
+            <div data-mention-suggestions-count={suggestionCount}>
+              {showDebug && (
+                <div className="fixed top-20 right-4 z-60 bg-white border p-2 text-xs shadow rounded">
+                  <div><strong>Mention Debug</strong></div>
+                  <div>query: {currentMentionQuery}</div>
+                  <div>matchesCount: {suggestionCount}</div>
+                  <div>usersCount: {users?.length ?? 0}</div>
+                </div>
+              )}
+              <MentionSuggestions
+                query={currentMentionQuery}
+                users={users}
+                currentUserId={currentUserId || ''}
+                onSelectMention={handleSelectMention}
+                onClose={handleCloseSuggestions}
+                position={suggestionPosition}
+                suggestionsOverride={suggestionsOverride}
+              />
+            </div>
+          )
+        })()}
       </div>
     )
   }
@@ -161,21 +222,52 @@ export function MentionInput({
         onKeyDown={handleKeyDown}
         onFocus={handleInputFocus}
         onBlur={handleInputBlur}
+        autoComplete="off"
+        spellCheck={false}
         placeholder={placeholder}
         className={`flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm transition-colors file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50 ${className}`}
         disabled={disabled}
       />
       
-      {showSuggestions && (
-        <MentionSuggestions
-          query={currentMentionQuery}
-          users={users}
-          currentUserId={currentUserId || ''}
-          onSelectMention={handleSelectMention}
-          onClose={handleCloseSuggestions}
-          position={suggestionPosition}
-        />
-      )}
+      {showSuggestions && (() => {
+        // compute suggestion results and fallback for single-line input
+        let suggestionCount = 0
+  let suggestionsOverride = undefined as undefined | SuggestionWithMatches[]
+        try {
+          const matches = searchMentionSuggestions(currentMentionQuery, users, currentUserId || '')
+          suggestionCount = matches.length
+          if (matches.length === 0 && users && users.length > 0) {
+            suggestionsOverride = users.filter(u => u.id !== (currentUserId || '')).slice(0, 5).map(u => ({ item: u }))
+            suggestionCount = suggestionsOverride.length
+          }
+        } catch {
+          suggestionCount = (users && users.length) ? Math.min(5, users.length) : 0
+        }
+
+        const showDebug = typeof window !== 'undefined' && window.location && new URL(window.location.href).searchParams.get('debug_mentions') === '1'
+
+        return (
+          <div data-mention-suggestions-count={suggestionCount}>
+            {showDebug && (
+              <div className="fixed top-20 right-4 z-60 bg-white border p-2 text-xs shadow rounded">
+                <div><strong>Mention Debug</strong></div>
+                <div>query: {currentMentionQuery}</div>
+                <div>matchesCount: {suggestionCount}</div>
+                <div>usersCount: {users?.length ?? 0}</div>
+              </div>
+            )}
+            <MentionSuggestions
+              query={currentMentionQuery}
+              users={users}
+              currentUserId={currentUserId || ''}
+              onSelectMention={handleSelectMention}
+              onClose={handleCloseSuggestions}
+              position={suggestionPosition}
+              suggestionsOverride={suggestionsOverride}
+            />
+          </div>
+        )
+      })()}
     </div>
   )
 }

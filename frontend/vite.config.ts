@@ -44,7 +44,12 @@ export default defineConfig({
   },
   build: {
     rollupOptions: {
-      external: ['@azure/cosmos'],
+      // '@azure/cosmos' used to be externalized to avoid bundling the SDK into
+      // the client bundle when some admin/debug utilities imported it.
+      // After moving all DB access to the backend, the SDK isn't imported by
+      // frontend sources anymore; keep this commented note in case it's
+      // intentionally reintroduced later.
+      // external: ['@azure/cosmos'],
       output: {
         manualChunks(id) {
           // Put large vendor libraries into a vendor chunk

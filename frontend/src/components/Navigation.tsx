@@ -30,6 +30,18 @@ interface NavigationProps {
   setIsCreatePostOpen: (open: boolean) => void
 }
 
+// small helper to check admin role safely
+function isAdmin(user?: unknown) {
+  try {
+    const u = user as unknown as Record<string, unknown>
+    const data = u?.['data'] as Record<string, unknown> | undefined
+    const roles = data?.['roles'] as unknown
+    return Array.isArray(roles) && (roles as string[]).includes('engageiq_admin')
+  } catch {
+    return false
+  }
+}
+
 export const LeftSidebar: React.FC<NavigationProps> = ({
   activeTab,
   setActiveTab,
@@ -49,7 +61,7 @@ export const LeftSidebar: React.FC<NavigationProps> = ({
 }) => {
   return (
     <aside className="hidden lg:block w-64 xl:w-80 flex-shrink-0">
-      <div className="sticky top-20 space-y-4">
+      <div className="space-y-4">
         {/* Community Navigation */}
         <Card className="p-4">
           <div className="mb-3">
@@ -72,6 +84,17 @@ export const LeftSidebar: React.FC<NavigationProps> = ({
               <Users className="h-4 w-4" />
               Groups
             </Button>
+            {/* Admin Moderation link - only visible to moderators/admins */}
+            {isAdmin(currentUser) && (
+              <Button
+                variant={activeTab === 'moderation' ? 'default' : 'ghost'}
+                className="w-full justify-start gap-3"
+                onClick={() => setActiveTab('moderation')}
+              >
+                <Shield className="h-4 w-4" />
+                Admin Moderation
+              </Button>
+            )}
           </nav>
         </Card>
 

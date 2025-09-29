@@ -1,7 +1,7 @@
 import React from 'react';
 import { useEffect, useState } from 'react'
 import { useAuth } from '@/hooks/useAuth'
-import { DatabaseConfigCard } from './DatabaseConfigCard'
+// DatabaseConfigCard removed: database configuration is server-side only.
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog'
@@ -14,7 +14,7 @@ import {
   Sparkle as Sparkles,
   Play
 } from '@phosphor-icons/react'
-import { config, isDevelopment } from '@/lib/config'
+import { isDevelopment } from '@/lib/config'
 import databaseService from '@/lib/database'
 
 // Demo component to create sample users for testing and show database configuration
@@ -76,7 +76,7 @@ export const DemoUserSetup: React.FC = () => {
               <Database className="h-4 w-4" />
               DB Config
               <Badge variant="secondary" className="ml-1 text-xs">
-                {config.database.provider.toUpperCase()}
+                BACKEND
               </Badge>
             </Button>
           </DialogTrigger>
@@ -88,7 +88,7 @@ export const DemoUserSetup: React.FC = () => {
               </DialogTitle>
             </DialogHeader>
             <div className="space-y-4">
-              <DatabaseConfigCard />
+              {/* DatabaseConfigCard removed: use server-side configuration. */}
               
               {/* Demo Users Info */}
               <Card>

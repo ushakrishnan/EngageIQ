@@ -7,16 +7,6 @@
 
 export type DatabaseProvider = 'cosmos'
 
-interface DatabaseConfig {
-  provider: DatabaseProvider
-  cosmos: {
-    endpoint: string
-    key: string
-    databaseName: string
-    containerName: string
-  }
-}
-
 interface AppConfig {
   name: string
   environment: 'development' | 'production' | 'staging'
@@ -27,7 +17,6 @@ interface ApiConfig {
 }
 
 interface Config {
-  database: DatabaseConfig
   app: AppConfig
   api: ApiConfig
 }
@@ -48,9 +37,6 @@ const getEnvVar = (key: string, fallback: string = ''): string => {
   }
   if (envValue === undefined && typeof process !== 'undefined' && process.env && process.env[key] !== undefined) {
     envValue = process.env[key];
-  }
-  if (envValue === undefined && !fallback) {
-    console.warn(`Environment variable ${key} is not set`);
   }
   return envValue !== undefined ? envValue : fallback;
 }
@@ -77,15 +63,6 @@ const getEnvBoolean = (key: string, fallback: boolean = false): boolean => {
  * Main configuration object
  */
 export const config: Config = {
-  database: {
-    provider: (getEnvVar('VITE_DATABASE_PROVIDER', 'cosmos') as DatabaseProvider),
-    cosmos: {
-      endpoint: getEnvVar('VITE_COSMOS_ENDPOINT'),
-      key: getEnvVar('VITE_COSMOS_KEY'),
-      databaseName: getEnvVar('VITE_COSMOS_DATABASE_NAME', 'EngageIQ'),
-      containerName: getEnvVar('VITE_COSMOS_CONTAINER_NAME', 'data')
-    }
-  },
   app: {
     name: getEnvVar('VITE_APP_NAME', 'EngageIQ'),
     environment: getEnvVar('VITE_ENVIRONMENT', 'development') as 'development' | 'production' | 'staging'
@@ -95,34 +72,10 @@ export const config: Config = {
   }
 }
 
-/**
- * Validate database configuration (Cosmos only)
- */
-const validateDatabaseConfig = (): boolean => {
-  const provider = config.database.provider
-
-  if (provider === 'cosmos') {
-    const requiredVars = [
-      'VITE_COSMOS_ENDPOINT',
-      'VITE_COSMOS_KEY'
-    ]
-    const missing = requiredVars.filter(varName => !getEnvVar(varName))
-    if (missing.length > 0) {
-      console.error('Missing required Cosmos DB environment variables:', missing)
-      console.error('Please check your .env file and ensure all Cosmos DB variables are set')
-      return false
-    }
-  } else {
-    console.error('Please set VITE_DATABASE_PROVIDER to a supported provider (currently: "cosmos")')
-    return false
-  }
-  return true
-}
-
-// Validate configuration on module load (only in development)
-if (config.app.environment === 'development') {
-  validateDatabaseConfig()
-}
+// No runtime validation is performed here. Backend is authoritative for
+// database configuration and secrets. Frontend may include a local
+// emulator endpoint (VITE_COSMOS_ENDPOINT) when useful for development,
+// but we purposely avoid runtime checks or warnings in the client.
 
 /**
  * Check if we're in development mode
@@ -137,17 +90,14 @@ export const isProduction = config.app.environment === 'production'
 /**
  * Database helper
  */
-export const isCosmosDbConfigured = () => {
-  return !!(config.database.cosmos.endpoint && config.database.cosmos.key)
-}
-
-export const isDatabaseConfigured = () => isCosmosDbConfigured()
+// Note: database provider/config checks and any client-side exposure of
+// provider-specific secret shapes are intentionally omitted. The backend is
+// authoritative for database configuration and secrets; frontend must not
+// perform client-side setup or hold production keys.
 
 /**
  * Export individual config sections for convenience
  */
-export const databaseConfig = config.database
-export const cosmosConfig = config.database.cosmos
 export const appConfig = config.app
 export const apiConfig = config.api
 

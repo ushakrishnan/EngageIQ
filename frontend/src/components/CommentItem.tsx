@@ -87,6 +87,20 @@ export const CommentItem: React.FC<CommentItemProps> = ({
     console.log('User clicked:', user)
   }, [])
 
+  // Temporary debug: when requested via URL flag, log mentionable users passed into this component
+  useEffect(() => {
+    try {
+      const showDebug = typeof window !== 'undefined' && window.location && new URL(window.location.href).searchParams.get('debug_mentions') === '1'
+      if (!showDebug) return
+      const count = Array.isArray(allMentionableUsers) ? allMentionableUsers.length : 0
+      const sample = (Array.isArray(allMentionableUsers) ? allMentionableUsers.slice(0, 5).map(u => ({ id: u.id, name: u.name })) : [])
+  // Use console.debug so it can be filtered easily in devtools
+  console.debug('[CommentItem] allMentionableUsers', { usersCount: count, sample })
+    } catch {
+      // swallow errors during debug logging
+    }
+  }, [allMentionableUsers])
+
   const hasReplies = comment.replies && comment.replies.length > 0
   const maxDepth = 3 // Limit nesting depth
   const isOwner = comment.userId === currentUser?.id

@@ -1,5 +1,6 @@
 import config from './config.js'
 import { getContainer } from './db.js'
+import logger from './logger.js'
 
 function safeString(v: any) {
   return v == null ? '' : String(v)
@@ -57,7 +58,7 @@ export async function callAutotagProvider(content: string, maxTags = 6) {
         }
         text = await res.text()
       } catch (e) {
-        console.error('Autotag fetch failed', (e as any)?.message || e)
+        logger.error('Autotag fetch failed: %o', (e as any)?.message || e)
         return []
       }
 
@@ -95,19 +96,19 @@ export async function callAutotagProvider(content: string, maxTags = 6) {
         }
         j = await res.json()
       } catch (e) {
-        console.error('Foundry autotag failed', (e as any)?.message || e)
+        logger.error('Foundry autotag failed: %o', (e as any)?.message || e)
         return []
       }
       const raw = j?.choices?.[0]?.message?.content || j?.choices?.[0]?.text || ''
       const m = raw.match(/\[.*\]/s)
       if (m) {
-        try { const parsed = JSON.parse(m[0]); return Array.isArray(parsed) ? parsed.slice(0, maxTags).map(safeString) : [] } catch (e) { console.error('Failed to parse Foundry response', e) }
+        try { const parsed = JSON.parse(m[0]); return Array.isArray(parsed) ? parsed.slice(0, maxTags).map(safeString) : [] } catch (e) { logger.error('Failed to parse Foundry response: %o', e) }
       }
       const fallback = raw.split(/[,\n]/).map((s: string) => s.trim()).filter(Boolean)
       return fallback.slice(0, maxTags).map(safeString)
     }
   } catch (err) {
-    console.error('Autotag provider failed', err)
+    logger.error('Autotag provider failed: %o', err)
     return []
   }
   return []
@@ -136,7 +137,7 @@ export async function callRewriteProvider(content: string, style = 'concise') {
         const rewritten = (j?.choices?.[0]?.message?.content) || j?.choices?.[0]?.text || ''
         return String(rewritten || '').trim()
       } catch (e) {
-        console.error('Rewrite fetch failed', (e as any)?.message || e)
+        logger.error('Rewrite fetch failed: %o', (e as any)?.message || e)
         return String(content || '').trim()
       }
     } else if (provider === 'FOUNDRY') {
@@ -158,12 +159,12 @@ export async function callRewriteProvider(content: string, style = 'concise') {
         const rewritten = (j?.choices?.[0]?.message?.content) || j?.choices?.[0]?.text || ''
         return String(rewritten || '').trim()
       } catch (e) {
-        console.error('Foundry rewrite failed', (e as any)?.message || e)
+        logger.error('Foundry rewrite failed: %o', (e as any)?.message || e)
         return String(content || '').trim()
       }
     }
   } catch (err) {
-    console.error('Rewrite provider failed', err)
+    logger.error('Rewrite provider failed: %o', err)
     return String(content || '').trim()
   }
   return String(content || '').trim()
@@ -209,17 +210,77 @@ export async function computeVectors(embeddingDeployment?: string, tagsContainer
               await tagsCont.items.upsert(upsertDoc)
               processed++
             } catch (e) {
-              console.warn('Failed to persist tag vector for', chunk[k].id, (e as any).message || e)
+              logger.warn('Failed to persist tag vector for %s: %o', chunk[k].id, (e as any).message || e)
             }
           }
         }
         success = true
-      } catch (e) {
+        } catch (e) {
         attempt++
-        console.error('Embedding chunk failed (attempt ' + attempt + ')', (e as any)?.message || e)
+        logger.error('Embedding chunk failed (attempt %d): %o', attempt, (e as any)?.message || e)
         if (attempt < 3) await sleep(200 * attempt)
       }
     }
   }
   return { ok: true, processed }
+}
+
+export async function callModerationProvider(content: string) {
+  const provider = (config.autotagProvider || 'AOAI').toUpperCase()
+  if (!content) return { ok: true, flagged: false, provider: 'none', raw: null }
+  // naive profanity fallback
+  const PROFANITY = ['badword', 'curseword', 'damn']
+  const lowered = String(content).toLowerCase()
+  for (const p of PROFANITY) if (lowered.includes(p)) return { ok: true, flagged: true, reason: 'profanity', provider: 'fallback', raw: null }
+
+  try {
+    if (provider === 'AOAI') {
+      const endpoint = (process.env.AOAI_ENDPOINT || '').replace(/\/+$/, '')
+      const deployment = process.env.AOAI_DEPLOYMENT
+      const apiVersion = process.env.AOAI_API_VERSION || '2024-12-01-preview'
+      const key = process.env.AOAI_KEY
+      if (!endpoint || !deployment || !key) return { ok: false, flagged: false, provider: 'AOAI', raw: null }
+      const url = `${endpoint}/openai/deployments/${encodeURIComponent(deployment)}/chat/completions?api-version=${encodeURIComponent(apiVersion)}`
+      const system = `You are a safety assistant. Read the user's message and return a strict JSON object only: {"flagged": boolean, "reason": string}\n- flagged: true if the message should be blocked for policy reasons (hate, harassment, sexual content, threats, illegal activity), false otherwise.\n- reason: short string describing the reason if flagged, or empty string if not flagged.`
+      const body = { messages: [{ role: 'system', content: system }, { role: 'user', content }], max_completion_tokens: 64 }
+      const resp = await postJsonWithRetries(url, { method: 'POST', headers: { 'Content-Type': 'application/json', 'api-key': key }, body: JSON.stringify(body) }, 2)
+      const raw = typeof resp === 'string' ? resp : JSON.stringify(resp)
+      // try to parse a JSON blob from the response
+      try {
+        const m = raw.match(/\{[\s\S]*\}/)
+        if (m) {
+          const parsed = JSON.parse(m[0])
+          return { ok: true, flagged: Boolean(parsed.flagged), reason: parsed.reason || '', provider: 'AOAI', raw: parsed }
+        }
+      } catch (e) {
+        // ignore parsing errors
+      }
+      return { ok: true, flagged: false, provider: 'AOAI', raw: raw }
+    } else if (provider === 'FOUNDRY') {
+      const endpoint = (process.env.FOUNDRY_ENDPOINT || '').replace(/\/+$/, '')
+      const model = process.env.FOUNDRY_MODEL || 'phi-3.5-mini'
+      const key = process.env.FOUNDRY_KEY
+      if (!endpoint) return { ok: false, flagged: false, provider: 'FOUNDRY', raw: null }
+      const url = `${endpoint}/v1/chat/completions`
+      const body = { model, messages: [{ role: 'system', content: 'Return JSON only with {"flagged": boolean, "reason": string} based on safety policies.' }, { role: 'user', content }], max_tokens: 64 }
+      const headers: any = { 'Content-Type': 'application/json' }
+      if (key) headers['Authorization'] = `Bearer ${key}`
+      try {
+        const res = await postJsonWithRetries(url, { method: 'POST', headers, body: JSON.stringify(body) }, 2)
+        const raw = JSON.stringify(res)
+        const m = raw.match(/\{[\s\S]*\}/)
+        if (m) {
+          const parsed = JSON.parse(m[0])
+          return { ok: true, flagged: Boolean(parsed.flagged), reason: parsed.reason || '', provider: 'FOUNDRY', raw: parsed }
+        }
+        return { ok: true, flagged: false, provider: 'FOUNDRY', raw: raw }
+      } catch (e) {
+        return { ok: false, flagged: false, provider: 'FOUNDRY', raw: null }
+      }
+    }
+  } catch (err) {
+    logger.error('Moderation provider failed: %o', err)
+    return { ok: false, flagged: false, provider, raw: null }
+  }
+  return { ok: false, flagged: false, provider: provider, raw: null }
 }

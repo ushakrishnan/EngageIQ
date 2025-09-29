@@ -1,5 +1,6 @@
 import { CosmosClient } from '@azure/cosmos'
 import config from './config.js'
+import logger from './logger.js'
 
 const cosmosConfig = config.database.cosmos
 if (!cosmosConfig.endpoint || !cosmosConfig.key) {
@@ -47,7 +48,7 @@ export async function getOrCreateContainer(name: string) {
     const { container } = await database.containers.createIfNotExists({ id: mappedName, partitionKey: { paths: ['/id'] } })
     return container
   } catch (err) {
-    console.error(`[db] getOrCreateContainer failed for ${mappedName}:`, err)
+    logger.error('db.getOrCreateContainer failed for %s: %o', mappedName, err)
     // Fall back to returning container reference (may still error downstream)
     return database.container(mappedName)
   }
@@ -56,14 +57,14 @@ export async function getOrCreateContainer(name: string) {
 export default { client, database, getContainer }
 
 export async function ensureContainersExist() {
-  const required = ['users', 'groups', 'posts', 'comments', 'error', 'audit', 'daily-progress', 'moderation-action']
+  const required = ['users', 'groups', 'posts', 'comments', 'messages', 'error', 'audit', 'daily-progress', 'moderation-action']
   for (const id of required) {
     try {
       // Use partition key '/id' to support point reads by id
       await database.containers.createIfNotExists({ id, partitionKey: { paths: ['/id'] } })
-      console.log(`[db] ensured container exists: ${id}`)
+      logger.debug('[db] ensured container exists: %s', id)
     } catch (err) {
-      console.error(`[db] failed to ensure container ${id}:`, err)
+      logger.error('[db] failed to ensure container %s: %o', id, err)
     }
   }
 }

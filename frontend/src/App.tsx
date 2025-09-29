@@ -1,3 +1,4 @@
+import MessagesPanel from '@/components/MessagesPanel'; // Import MessagesPanel (default)
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { AuthProvider } from '@/components/AuthProvider';
 import { useAuth } from '@/hooks/useAuth';
@@ -22,6 +23,7 @@ const LogViewerPanel = React.lazy(() => import('@/components/LogViewerPanel'));
 import type { MentionableUser } from '@/lib/mentions';
 import { extractMentionedUserIds } from '@/lib/mentions';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+// MessagesPanel intentionally removed from persistent bottom-right; messages are available via the right sidebar or header action
 import { addUnsyncedItem, clearAllUnsynced, retryAllUnsynced } from '@/lib/unsynced';
 import { useDataStore } from '@/lib/useDataStore';
 import { isDevelopment } from '@/lib/config';
@@ -57,34 +59,7 @@ function MainApp() {
   const [showWelcomeMessage, setShowWelcomeMessage] = useState(false);
   const [isUserModerator, setIsUserModerator] = useState(false);
 
-  // Backend readiness check — show warning if DB is not configured/reachable
-  const [dbReady, setDbReady] = useState<boolean | null>(null);
-  useEffect(() => {
-    let mounted = true;
-    async function check() {
-      try {
-        const res = await fetch('/ready');
-        const json = await res.json();
-        if (mounted && json && json.ok) { setDbReady(true); return; }
-      } catch {
-        // ignore and try the more forgiving API probe below
-      }
-      try {
-        const res2 = await fetch('/api/items/daily-progress');
-        if (!mounted) return;
-        if (res2.ok) {
-          const arr = await res2.json();
-          if (Array.isArray(arr)) { setDbReady(true); return; }
-        }
-      } catch {
-        // still not reachable
-      }
-      if (mounted) setDbReady(false);
-    }
-    check();
-    const id = setInterval(check, 30_000);
-    return () => { mounted = false; clearInterval(id); };
-  }, []);
+  // Database readiness checks removed from frontend; backend is authoritative for DB state.
 
   // Only show database setup banner to administrators (power/super/admin roles)
   const isAdminUser = useMemo(() => {
@@ -135,13 +110,13 @@ function MainApp() {
   const allMentionableUsers = useMemo<MentionableUser[]>(() => {
     const safeUsers: User[] = users || [];
     if (!currentUser?.id) {
-      return safeUsers.map((u: User) => ({ id: u.id, name: u.name, avatar: u.avatar }));
+      return safeUsers.map((u: User) => ({ id: u.id, name: u.name, avatar: u.avatar, handle: (u.handle || u.name.replace(/\s+/g, '').toLowerCase()) }));
     }
     return [
-      ...safeUsers.map((u: User) => ({ id: u.id, name: u.name, avatar: u.avatar })),
-      { id: currentUser.id, name: currentUser.name, avatar: currentUser.avatar }
+      ...safeUsers.map((u: User) => ({ id: u.id, name: u.name, avatar: u.avatar, handle: (u.handle || u.name.replace(/\s+/g, '').toLowerCase()) })),
+      { id: currentUser.id, name: currentUser.name, avatar: currentUser.avatar, handle: (currentUser.handle || currentUser.name.replace(/\s+/g, '').toLowerCase()) }
     ];
-  }, [users, currentUser?.id, currentUser?.name, currentUser?.avatar]);
+  }, [users, currentUser?.id, currentUser?.name, currentUser?.avatar, currentUser?.handle]);
 
   // Post filtering and sorting logic
   const filteredAndSortedPosts = useMemo(() => {
@@ -249,6 +224,8 @@ function MainApp() {
     }, 100);
   };
 
+  // MessagesPanel is persistent (bottom-right) and minimized state persists to localStorage
+
   // Like handler
   const toggleLike = useCallback((postId: string) => {
     if (!currentUser?.id) return;
@@ -288,14 +265,15 @@ function MainApp() {
   const addComment = useCallback((postId: string, content: string, parentId?: string) => {
     if (!content.trim() || !currentUser?.id) return;
     const mentionedUserIds = extractMentionedUserIds(content, allMentionableUsers);
+    const now = Date.now();
     const newComment: Comment = {
-      id: `comment-${Date.now()}`,
+      id: `comment-${now}`,
       userId: currentUser.id,
       userName: currentUser.name,
       content: content.trim(),
-      timestamp: Date.now(),
+      timestamp: now,
       parentId,
-      mentions: mentionedUserIds
+      mentions: Array.isArray(mentionedUserIds) ? mentionedUserIds : []
     };
 
     // Build updatedPost deterministically so we can persist it after updating state
@@ -328,14 +306,22 @@ function MainApp() {
       return postsArray.map((post: Post) => post.id === postId ? updatedPostForPersist : post);
     });
 
-    // Award karma for comment (differentiate reply vs top-level)
+    // Award karma for comment (differentiate reply vs top-level) and award mentions to mentioned users
     try {
       if (!parentId) {
         awardKarma(currentUser.id, 'comment_made', 'Commented on a post', postId);
       } else {
         awardKarma(currentUser.id, 'comment_replied', 'Replied to a comment', postId);
       }
-    } catch { console.error('[App] awardKarma(comment) failed') }
+  } catch { console.error('[App] awardKarma(comment) failed') }
+
+  // Award karma for each mentioned user (best-effort client-side call)
+    if (Array.isArray(mentionedUserIds) && mentionedUserIds.length > 0) {
+      for (const mid of mentionedUserIds) {
+        if (!mid || mid === currentUser.id) continue;
+        try { awardKarma(mid, 'mentioned', `Mentioned in comment by ${currentUser?.name || 'someone'}`, postId); } catch (e) { console.error('[App] awardKarma(mentioned) failed for', mid, e); }
+      }
+    }
 
     // Persist updated post (or queue unsynced)
     (async () => {
@@ -630,32 +616,13 @@ function MainApp() {
     const id = window.setInterval(async () => {
       if (!mounted) return
       try {
-        // Only attempt retries when DB is not obviously unreachable
-        if (dbReady === false) return
         await retryAllUnsynced()
       } catch (e) {
         console.debug('[App] periodic retryAllUnsynced failed', e)
       }
     }, 30_000)
     return () => { mounted = false; clearInterval(id) }
-  }, [dbReady])
-  // When DB becomes ready, attempt an immediate flush of the unsynced queue
-  useEffect(() => {
-    if (dbReady !== true) return
-    let mounted = true
-    void (async () => {
-       try {
-         const result = await retryAllUnsynced()
-         if (!mounted) return
-         const attempted = (result && typeof result.attempted === 'number') ? result.attempted : 0
-         const succeeded = Array.isArray(result.succeeded) ? result.succeeded.length : 0
-         if (attempted > 0) toast.success(`${succeeded}/${attempted} unsynced items synced after DB became ready`)
-       } catch (e) {
-         console.debug('[App] initial retryAllUnsynced failed', e)
-       }
-     })()
-    return () => { mounted = false }
-  }, [dbReady])
+  }, [])
 
   // Render logic
   if (showSettings) {
@@ -717,9 +684,7 @@ function MainApp() {
   }
   return (
     <div className="min-h-screen bg-background">
-      {dbReady === false && isAdminUser && (
-        <div className="bg-yellow-100 text-yellow-900 p-2 text-center">Database setup required — backend cannot reach the database. Please start the Cosmos emulator or configure the database (see /admin).</div>
-      )}
+      {/* Database readiness UI removed — backend handles setup and admin notifications. */}
       <Header
   currentUser={currentUser as User}
         newPostContent={newPostContent}
@@ -803,6 +768,8 @@ function MainApp() {
       {showWelcomeMessage && <WelcomeMessage onDismiss={() => setShowWelcomeMessage(false)} />}
       {(isDevelopment || (currentUser && (currentUser.roles || []).includes('engageiq_admin'))) && (
         <>
+          {/* Debug tools (logs, unsynced). Messages removed from fixed bottom-right — use RightSidebar or open message center from header */}
+          <MessagesPanel currentUser={currentUser} users={users} isAdmin={isAdminUser} />
           <React.Suspense fallback={<div>Loading debug tools...</div>}>
             <UnsyncedDebugPanel />
             <LogViewerPanel />

@@ -1,0 +1,12 @@
+#!/usr/bin/env bash
+# Pre-commit hook: run frontend secret check
+echo "Running frontend secret check..."
+REPO_ROOT=$(git rev-parse --show-toplevel 2>/dev/null || echo "$(pwd)")
+node "$REPO_ROOT/tools/check_frontend_secrets.js"
+rc=$?
+if [ $rc -ne 0 ]; then
+  echo "Pre-commit hook: frontend secret check failed. Aborting commit."
+  exit $rc
+fi
+echo "Pre-commit: frontend secret check passed."
+exit 0

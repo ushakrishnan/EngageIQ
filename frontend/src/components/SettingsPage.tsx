@@ -12,8 +12,7 @@ import {
   ArrowLeft,
   Shield
 } from '@phosphor-icons/react'
-// Lazy-load heavy admin/database components to reduce initial bundle size
-const CosmosDBDashboard = React.lazy(() => import('./CosmosDBDashboard').then(mod => ({ default: mod.CosmosDBDashboard })))
+// AdminRolePanel remains lazy-loaded; database admin dashboard removed (server-side only)
 const AdminRolePanel = React.lazy(() => import('./AdminRolePanel').then(mod => ({ default: mod.default || mod.AdminRolePanel })))
 
 import {
@@ -250,9 +249,15 @@ export function SettingsPage({ onBack, currentUser, isUserModerator }: SettingsP
               {/* Database Settings (super-admin only) */}
               {isAdmin && (
                 <TabsContent value="database" className="space-y-6">
-                  <React.Suspense fallback={<div>Loading database tools...</div>}>
-                    <CosmosDBDashboard />
-                  </React.Suspense>
+                  <Card>
+                    <CardHeader>
+                      <h3 className="text-lg font-semibold">Database</h3>
+                      <p className="text-sm text-muted-foreground">Database configuration and management are handled on the server. Use backend admin scripts and the Azure Portal for management.</p>
+                    </CardHeader>
+                    <CardContent>
+                      <div className="text-sm text-muted-foreground">Server-side database tools available to super-admins.</div>
+                    </CardContent>
+                  </Card>
                 </TabsContent>
               )}
               {/* Admin User Management (super-admin only) */}

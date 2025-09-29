@@ -2,7 +2,7 @@ import React from 'react';
 
 import { useEffect, useState, useRef } from 'react'
 import { useCallback } from 'react'
-import databaseService, { initializeDatabase } from '@/lib/database'
+import databaseService from '@/lib/database'
 import { Button } from '@/components/ui/button'
 
 
@@ -38,6 +38,13 @@ const LogViewerPanel: React.FC = () => {
   const autoRefreshRef = useRef<ReturnType<typeof setInterval> | null>(null)
 
   const [filterText, setFilterText] = useState('')
+  const [minimized, setMinimized] = useState<boolean>(() => {
+    try {
+      return typeof window !== 'undefined' && window.localStorage && window.localStorage.getItem('engageiq:logviewer-minimized') === '1'
+    } catch {
+      return false
+    }
+  })
 
   useEffect(() => {
     // cleanup on unmount
@@ -64,10 +71,10 @@ const LogViewerPanel: React.FC = () => {
 
   const fetchAuditPage = useCallback(async (page: number) => {
     setLoading(true)
-    try {
-      await initializeDatabase()
-      const token = auditTokens[page]
-      const result = await databaseService.getAllByType('audit', token, PAGE_SIZE)
+  try {
+  // Use REST API adapter; do not initialize any client-side DB SDK
+  const token = auditTokens[page]
+  const result = await databaseService.getAllByType('audit', token, PAGE_SIZE)
       setAuditLogs((result.items || []).map((i: unknown) => {
         if (i && typeof i === 'object' && 'data' in i && (i as { data?: unknown }).data) {
           return (i as { data: AuditLog }).data
@@ -93,10 +100,10 @@ const LogViewerPanel: React.FC = () => {
 
   const fetchErrorPage = useCallback(async (page: number) => {
     setLoading(true)
-    try {
-      await initializeDatabase()
-      const token = errorTokens[page]
-      const result = await databaseService.getAllByType('error', token, PAGE_SIZE)
+  try {
+  // Use REST API adapter; do not initialize any client-side DB SDK
+  const token = errorTokens[page]
+  const result = await databaseService.getAllByType('error', token, PAGE_SIZE)
       setErrorLogs((result.items || []).map((i: unknown) => {
         if (i && typeof i === 'object' && 'data' in i && (i as { data?: unknown }).data) {
           return (i as { data: ErrorLog }).data
@@ -153,8 +160,24 @@ const LogViewerPanel: React.FC = () => {
     return (l.message || '').toString().toLowerCase().includes(s) || (l.source || '').toString().toLowerCase().includes(s)
   })
 
+  // If minimized, render a small pill that can re-open the panel
+  if (minimized) {
+    const totalCount = (errorLogs?.length || 0) + (auditLogs?.length || 0)
+       return (
+         // Position to the left side of the page (stacked left-to-right)
+         <div className="fixed bottom-4 left-36 z-40">
+        <div className="flex items-center gap-2">
+          <button onClick={() => { setMinimized(false); try { localStorage.setItem('engageiq:logviewer-minimized', '0') } catch { /* ignore localStorage errors */ } }} className="px-3 py-1 rounded bg-card border border-border text-sm shadow flex items-center gap-2">
+            <span>Logs</span>
+            {totalCount > 0 && <span className="inline-flex items-center justify-center rounded-full bg-destructive text-white text-[10px] px-2">{totalCount}</span>}
+          </button>
+        </div>
+      </div>
+    )
+  }
+
   return (
-    <div className="fixed bottom-4 right-4 z-50 w-[560px] max-h-[70vh] overflow-y-auto bg-card border border-border p-3 rounded shadow-lg">
+  <div className="fixed bottom-4 left-36 z-40 w-[560px] max-h-[70vh] overflow-y-auto bg-card border border-border p-3 rounded shadow-lg">
       <div className="flex items-center justify-between mb-2">
         <div className="font-medium">Audit & Error Logs</div>
         <div className="flex gap-2 items-center">
@@ -166,6 +189,11 @@ const LogViewerPanel: React.FC = () => {
           />
           <Button size="sm" variant="outline" onClick={() => { void fetchAuditPage(auditPage); void fetchErrorPage(errorPage) }}>{loading ? '...' : 'Refresh'}</Button>
           <Button size="sm" variant={autoRefresh ? 'default' : 'outline'} onClick={() => setAutoRefresh(v => !v)}>{autoRefresh ? 'Auto ON' : 'Auto OFF'}</Button>
+          <Button size="sm" variant="ghost" onClick={() => { setMinimized(true); try { localStorage.setItem('engageiq:logviewer-minimized', '1') } catch { /* ignore localStorage errors */ } }} aria-label="Minimize logs">
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
+              <line x1="5" y1="12" x2="19" y2="12" />
+            </svg>
+          </Button>
         </div>
       </div>
 

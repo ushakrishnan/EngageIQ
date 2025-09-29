@@ -5,8 +5,8 @@ import { Button } from '@/components/ui/button'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog'
 import { Textarea } from '@/components/ui/textarea'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
-import { Hash } from '@phosphor-icons/react'
-import { config, appConfig, isDevelopment } from '@/lib/config'
+import { Hash, Envelope } from '@phosphor-icons/react'
+import { appConfig, isDevelopment } from '@/lib/config'
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from '@/components/ui/dropdown-menu'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { User as UserIcon, PencilSimple, Gear, SignOut } from '@phosphor-icons/react'
@@ -58,6 +58,7 @@ export const Header: React.FC<HeaderProps> = ({
   const [adminReachable, setAdminReachable] = useState<boolean | null>(null)
   const [, setAdminStatus] = useState<'unknown' | 'running' | 'not-running'>('unknown')
   const [isRewriting, setIsRewriting] = useState(false)
+  // Messages button now opens the persistent MessagesPanel (not a popup)
 
   // Check admin server reachability only when autotag provider is set to Foundry
   // Track admin server status (running/not-running) for menu logic
@@ -184,12 +185,16 @@ export const Header: React.FC<HeaderProps> = ({
               </kbd>
             </Button>
             
-            {/* Database Provider Indicator */}
-            {isDevelopment && (
-              <div className="hidden sm:flex items-center gap-1 text-xs text-muted-foreground bg-muted/50 px-2 py-1 rounded">
-                DB: {config.database.provider.toUpperCase()}
-              </div>
-            )}
+            {/* Message center trigger: open the persistent MessagesPanel via a global event */}
+            <button title="Messages" type="button" className="relative h-8 w-8 rounded-full" onClick={() => {
+              try {
+                // clear minimize flag and notify panel to open
+                if (typeof window !== 'undefined' && window.localStorage) window.localStorage.setItem('engageiq:messages-minimized', '0')
+                window.dispatchEvent(new Event('engageiq:open-messages'))
+              } catch { /* ignore */ }
+            }}>
+              <Envelope className="h-5 w-5" />
+            </button>
             
             <Dialog open={isCreatePostOpen} onOpenChange={(open: boolean) => {
               setIsCreatePostOpen(open)

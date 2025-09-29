@@ -34,7 +34,8 @@ This document describes the utility scripts under the `scripts/` folder. Each en
   - `node ./scripts/setup.mjs`
   - Called by developers or the `dev-server.mjs` wrapper when setup is missing.
 - Environment:
-  - Writes: `VITE_DATABASE_PROVIDER`, `VITE_COSMOS_ENDPOINT`, `VITE_COSMOS_KEY`, `VITE_COSMOS_DATABASE_NAME`, etc.
+  - Writes: `VITE_DATABASE_PROVIDER`, `VITE_COSMOS_ENDPOINT`, `VITE_COSMOS_DATABASE_NAME`, etc.
+  - Note: Production Cosmos keys (primary/secondary) must be stored in the backend `.env` or a managed secrets store. These scripts run in a backend context and expect secrets to be available to the process via `process.env` or a backend `.env` file. Do NOT place production keys in frontend `VITE_` variables — anything prefixed with `VITE_` is bundled into the client at build time and may be exposed.
 - Notes:
   - Interactive; overwrites `.env` if user confirms. Runs `scripts/create-containers-and-seed.mjs` if seeding requested.
 
@@ -64,8 +65,8 @@ This document describes the utility scripts under the `scripts/` folder. Each en
 ### `scripts/create-containers-and-seed.mjs`
 - Purpose: Ensure required per-type containers exist in Cosmos and then run the seeder.
 - Usage: `node ./scripts/create-containers-and-seed.mjs`
-- Environment:
-  - `VITE_COSMOS_ENDPOINT`, `VITE_COSMOS_KEY`, `VITE_COSMOS_DATABASE_NAME` (defaults to 'EngageIQ')
+  - Environment:
+  - `VITE_COSMOS_ENDPOINT` (optional for local emulators). Server-side scripts/readers require the Cosmos key via backend `.env` (or process.env). The scripts assume they run in the backend context where secrets are available.
 - Notes:
   - This script supports local emulator (will temporarily set `NODE_TLS_REJECT_UNAUTHORIZED=0` when running against localhost).
   - Invokes `./seed-data.mjs` to populate sample data.
@@ -93,7 +94,7 @@ This document describes the utility scripts under the `scripts/` folder. Each en
 ### `scripts/fresh-seed-all.mjs`
 - Purpose: Recreate per-type containers and seed demo data. Deletes known per-type containers (and a fallback container) first, then re-creates them and seeds data.
 - Usage: `node ./scripts/fresh-seed-all.mjs`
-- Environment: Cosmos env vars
+  - Environment: Cosmos env vars (server-side). Ensure keys are provided to the backend process (e.g., in `backend/.env`) and NOT in frontend client env files.
 - Notes:
   - This is destructive: it attempts to delete containers before recreating/seeding; use with caution or only in disposable dev environments.
   - See also: `scripts/smoke-follow-test.mjs` — a lightweight smoke-test script useful for exercising follow/unfollow and karma flows against a seeded demo environment.
@@ -105,7 +106,7 @@ This document describes the utility scripts under the `scripts/` folder. Each en
 - Usage:
   - Interactive: `node ./scripts/migrate-cosmos.mjs` (prompts to seed/clear)
   - CLI options: `--seed` to seed demo data, `--clear` to clear existing per-type data
-- Environment: Cosmos env vars
+  - Environment: Cosmos env vars (used by backend scripts). DO NOT expose these in frontend bundles.
 - Notes: Can be used to seed users/groups/posts in a migration-style workflow. Provides helper functions (`migrateData`, `convertToCosmosFormat`).
 
 ---

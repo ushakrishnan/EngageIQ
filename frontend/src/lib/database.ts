@@ -168,16 +168,19 @@ class RestApiDatabaseAdapter implements DatabaseService {
         })
       } catch (e) {
         // Best-effort logging — don't throw from logger
-        console.error('[RestApiDatabaseAdapter] logError POST failed', e)
+          if (typeof console !== 'undefined' && (console.debug || console.log)) (console.debug || console.log)('[RestApiDatabaseAdapter] logError POST failed', e)
       }
     } catch (e) {
-      console.error('[RestApiDatabaseAdapter] logError failed to build payload', e)
+        if (typeof console !== 'undefined' && (console.debug || console.log)) (console.debug || console.log)('[RestApiDatabaseAdapter] logError failed to build payload', e)
     }
   }
 }
 
 function createDatabaseService(): DatabaseService {
-  console.log('🌐 Using REST API as database provider')
+  // Reduced verbosity: prefer debug-level message so production console isn't noisy
+  if (typeof console !== 'undefined' && (console.debug || console.log)) {
+    (console.debug || console.log)('🌐 Using REST API as database provider')
+  }
   return new RestApiDatabaseAdapter()
 }
 
@@ -185,14 +188,7 @@ function createDatabaseService(): DatabaseService {
 export const databaseService = createDatabaseService()
 
 // Initialize the service on module load
-let initializationPromise: Promise<void> | null = null
-
-export async function initializeDatabase(): Promise<void> {
-  if (!initializationPromise) {
-    initializationPromise = databaseService.initialize()
-  }
-  return initializationPromise
-}
+// REST adapter requires no client-side initialization; keep module lean
 
 // Export config for convenience
 export { config } from './config'

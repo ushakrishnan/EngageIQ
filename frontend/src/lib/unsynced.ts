@@ -1,5 +1,5 @@
 import databaseService from '@/lib/database'
-import { directErrorLog } from '@/lib/directErrorLog'
+import { reportErrorToBackend } from '@/lib/errorClient'
 
 const UNSYNC_KEY = 'engageiq:unsynced-items'
 
@@ -127,7 +127,7 @@ export async function retryAllUnsynced() {
       });
       writeStorageRaw(remaining)
       try {
-        await directErrorLog('unsynced.invalidPayload', { removed: invalidReady.map(ir => ir.payload?.id) })
+        await reportErrorToBackend('unsynced.invalidPayload', { removed: invalidReady.map(ir => ir.payload?.id) })
       } catch (err) {
         console.error('[unsynced] failed to log invalid payloads', err)
       }

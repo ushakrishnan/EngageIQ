@@ -48,17 +48,10 @@ export function EnvironmentDemo() {
         <CardContent className="space-y-4">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div className="flex items-center justify-between">
-              <span className="text-sm font-medium">Cosmos Endpoint</span>
-              <Badge variant={config.database?.cosmos?.endpoint ? "default" : "destructive"}>
-                {config.database?.cosmos?.endpoint ? "Configured" : "Missing"}
-              </Badge>
+              <span className="text-sm font-medium">Database</span>
+              <Badge variant="outline">Managed by backend</Badge>
             </div>
-            <div className="flex items-center justify-between">
-              <span className="text-sm font-medium">Cosmos Key</span>
-              <Badge variant={config.database?.cosmos?.key ? "default" : "destructive"}>
-                {config.database?.cosmos?.key ? "Configured" : "Missing"}
-              </Badge>
-            </div>
+            {/* Database key is intentionally not exposed in the frontend */}
             <div className="flex items-center justify-between">
               <span className="text-sm font-medium">App Name</span>
               <Badge variant="outline">{config.app.name}</Badge>

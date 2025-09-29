@@ -2,8 +2,8 @@ import { useEffect, useState } from 'react'
 import { config } from '@/lib/config'
 
 // Simple validation function that narrows unknown to a config-like object
-const validateConfig = (cfg: unknown): cfg is { app: Record<string, unknown>, database: Record<string, unknown>, api: Record<string, unknown> } => {
-  return typeof cfg === 'object' && cfg !== null && 'app' in cfg && 'database' in cfg && 'api' in cfg
+const validateConfig = (cfg: unknown): cfg is { app: Record<string, unknown>, api: Record<string, unknown> } => {
+  return typeof cfg === 'object' && cfg !== null && 'app' in cfg && 'api' in cfg
 }
 
 /**
@@ -25,8 +25,6 @@ export function useAppConfig() {
       console.log('App Configuration:', {
         name: config.app.name,
         environment: config.app.environment,
-        databaseProvider: config.database.provider,
-        cosmosConfigured: !!(config.database.cosmos.endpoint && config.database.cosmos.key),
       })
     }
   }, [])

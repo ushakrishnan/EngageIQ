@@ -5,6 +5,7 @@ import logger from '../logger.js'
 import { callRewriteProvider } from '../ai.js'
 import { loadUserByHeader, requireEngageIQAdmin } from '../middleware/auth.js'
 import { getContainer, database, getOrCreateContainer } from '../db.js'
+import moderationRouter from './adminModeration.js'
 
 const router = Router()
 
@@ -209,8 +210,32 @@ router.post('/autotag', loadUserByHeader, async (req, res) => {
     const sorted = Object.keys(counts).sort((a,b) => counts[b] - counts[a]).slice(0,5)
     return res.json({ tags: sorted })
   } catch (err) {
-    console.error('/admin/autotag failed: %o', err)
+    logger.error('/admin/autotag failed: %o', err)
     return res.status(500).json({ error: 'autotag failed', details: (err as any)?.message || String(err) })
+  }
+})
+
+// POST /admin/test-cosmos - server-side test of Cosmos credentials (admin only)
+router.post('/test-cosmos', loadUserByHeader, requireEngageIQAdmin, async (req, res) => {
+  try {
+    const { endpoint, key } = req.body || {}
+    if (!endpoint || !key) return res.status(400).json({ ok: false, error: 'missing endpoint or key' })
+    try {
+      const { CosmosClient } = await import('@azure/cosmos')
+      const client = new CosmosClient({ endpoint, key })
+      // call a lightweight method to validate credentials
+      const maybe = client as unknown as { getDatabaseAccount?: () => Promise<unknown> }
+      if (typeof maybe.getDatabaseAccount === 'function') {
+        await maybe.getDatabaseAccount()
+      }
+      return res.json({ ok: true })
+    } catch (err) {
+      logger.error('/admin/test-cosmos failed: %o', err)
+      return res.status(500).json({ ok: false, error: (err as any)?.message || String(err) })
+    }
+  } catch (err) {
+    logger.error('/admin/test-cosmos handler failed: %o', err)
+    return res.status(500).json({ ok: false, error: 'internal' })
   }
 })
 
@@ -241,5 +266,8 @@ router.post('/rewrite', loadUserByHeader, async (req, res) => {
     return res.status(500).json({ error: 'rewrite failed', details: (err as any)?.message || String(err) })
   }
 })
+
+// mount moderation sub-router
+router.use('/moderation', moderationRouter)
 
 export default router

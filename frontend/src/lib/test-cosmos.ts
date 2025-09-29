@@ -1,40 +1,26 @@
 /**
- * Simple test utility to verify Cosmos DB connectivity
- * This can be called from the console for debugging
+ * Frontend helper to ask the backend to test a database connection.
+ * This avoids including secrets or the SDK in the client bundle.
+ * The backend must expose an admin-only endpoint to perform the test.
  */
-
-export async function testCosmosConnection(endpoint: string, key: string) {
+export async function testDatabaseConnection(endpoint: string, key: string) {
   try {
-    console.log('Testing Cosmos DB connection...')
-    console.log('Endpoint:', endpoint)
-    console.log('Key length:', key.length)
-    
-    // Cosmos SDK is imported dynamically when the test is invoked to avoid bundling it in the main app
-    // use eval to avoid static analysis by Vite so the SDK isn't required as a dev dependency
-    const { CosmosClient } = await eval('import("@azure/cosmos")')
-    const client = new CosmosClient({ endpoint, key })
-    const maybeClient = client as unknown as { getDatabaseAccount?: () => Promise<Record<string, unknown>> }
-    const account = maybeClient.getDatabaseAccount ? await maybeClient.getDatabaseAccount() : undefined
-    
-    console.log('✅ Connection successful!')
-    const resource = (account as unknown as Record<string, unknown>)?.resource as Record<string, unknown> | undefined
-    console.log('Account ID:', resource?.id)
-    console.log('Consistency policy:', resource?.consistencyPolicy)
-    const readableLocations = Array.isArray(resource?.readableLocations) ? resource!.readableLocations as Array<Record<string, unknown>> : []
-    console.log('Regions:', readableLocations.map(r => r.name))
-    
-    return true
-  } catch (error: unknown) {
-    const errObj = typeof error === 'object' && error !== null ? error as Record<string, unknown> : {}
-    console.error('❌ Connection failed:', error)
-    console.error('Error code:', errObj['code'])
-    console.error('Error message:', errObj['message'])
-    
+    const apiBase = (import.meta.env.VITE_ADMIN_SERVER_URL as string) || (import.meta.env.VITE_API_BASE_URL as string) || ''
+    const res = await fetch(`${apiBase.replace(/\/$/, '')}/admin/test-cosmos`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ endpoint, key })
+    })
+    if (!res.ok) return false
+    const json = await res.json()
+    return !!json?.ok
+  } catch (err) {
+    console.error('[testDatabaseConnection] request failed', err)
     return false
   }
 }
 
-// Make it available globally for debugging
 if (typeof window !== 'undefined') {
-  (window as unknown as Record<string, unknown>).testCosmosConnection = testCosmosConnection as unknown
- }
+  // expose lightly for debugging in dev only
+  (window as unknown as Record<string, unknown>).testDatabaseConnection = testDatabaseConnection as unknown
+}

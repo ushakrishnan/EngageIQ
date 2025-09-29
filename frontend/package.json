@@ -7,6 +7,7 @@
     "dev": "vite",
     "migrate:normalize-daily-progress": "ts-node -r tsconfig-paths/register src/lib/migrations/normalizeDailyProgress.ts",
     "build": "tsc -b && vite build",
+  "check:frontend-secrets": "node ../tools/check_frontend_secrets.js",
     "test": "vitest run",
     "build:analyze": "cross-env ANALYZE=true tsc -b && vite build",
     "lint": "eslint .",
@@ -39,6 +40,8 @@
     "tailwind-merge": "^3.3.1",
     "tsx": "^4.20.5",
     "tw-animate-css": "^1.3.8"
+    ,
+    "fuse.js": "^6.6.2"
   },
   "devDependencies": {
     "@eslint/js": "^9.33.0",

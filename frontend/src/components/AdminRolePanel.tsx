@@ -6,7 +6,7 @@ import { Badge } from '@/components/ui/badge'
 import { Users, Shield } from '@phosphor-icons/react'
 import type { User } from '@/types'
 import { useAuth } from '@/hooks/useAuth'
-import databaseService, { initializeDatabase, type DatabaseItem } from '@/lib/database'
+import databaseService, { type DatabaseItem } from '@/lib/database'
 // Storage key to notify other tabs of user updates
 const USERS_UPDATED_KEY = 'engageiq:users-updated'
 
@@ -17,6 +17,9 @@ interface AdminRolePanelProps {
 
 export function AdminRolePanel({ users, setUsers }: AdminRolePanelProps) {
   const [open, setOpen] = useState(false)
+  const [minimized, setMinimized] = useState<boolean>(() => {
+    try { return typeof window !== 'undefined' && window.localStorage && window.localStorage.getItem('engageiq:adminpanel-minimized') === '1' } catch { return false }
+  })
   const [localUsers, setLocalUsers] = useState<User[]>(users || [])
 
   useEffect(() => {
@@ -47,7 +50,7 @@ export function AdminRolePanel({ users, setUsers }: AdminRolePanelProps) {
         }
       }
       try {
-        await initializeDatabase()
+        // Use REST adapter on the backend; do not initialize client-side DB SDK
         await databaseService.create(audit)
       } catch (e) {
         console.error('[AdminRolePanel] failed to write audit record:', e)
@@ -141,9 +144,9 @@ export function AdminRolePanel({ users, setUsers }: AdminRolePanelProps) {
   }
 
   const fetchAuditLogs = async (): Promise<void> => {
-    try {
-      await initializeDatabase()
-      const items: DatabaseItem[] = await databaseService.queryByType('audit')
+      try {
+        // Do not initialize client-side DB SDK; use REST adapter which calls backend APIs
+        const items: DatabaseItem[] = await databaseService.queryByType('audit')
       setAuditLogs(items)
     } catch (err) {
       console.error('[AdminRolePanel] failed to fetch audit logs', err)
@@ -156,7 +159,7 @@ export function AdminRolePanel({ users, setUsers }: AdminRolePanelProps) {
       if (!e.key) return
       if (e.key !== USERS_UPDATED_KEY) return
       try {
-        await initializeDatabase()
+        // Use REST API to fetch users
         const dbItems: DatabaseItem[] = await databaseService.queryByType('user')
         const freshUsers = dbItems.map(i => i.data as User)
         setUsers(freshUsers)
@@ -169,12 +172,36 @@ export function AdminRolePanel({ users, setUsers }: AdminRolePanelProps) {
     return () => window.removeEventListener('storage', handler)
   }, [setUsers])
 
+  // Position admin panel at bottom-right (but below MessagingCenter) and allow minimizing so it doesn't cover the message center
+  if (minimized) {
+    return (
+      // Position this pill to the right of the messages pill (messages: right-4, this: right-28)
+      <div className="fixed bottom-4 right-28 z-50">
+        <div className="flex items-center gap-2">
+          <button onClick={() => { setMinimized(false); try { localStorage.setItem('engageiq:adminpanel-minimized','0') } catch { /* ignore */ } }} className="px-3 py-1 rounded bg-card border border-border text-sm shadow">Roles</button>
+        </div>
+      </div>
+    )
+  }
+
   return (
-    <div className="fixed top-4 left-4 z-50">
+  <div className="fixed bottom-4 right-28 z-50">
       <div className="flex items-center justify-start">
-        <Button size="sm" variant="outline" onClick={() => setOpen(!open)} className="gap-2">
-          <Shield className="h-4 w-4" /> Roles
-        </Button>
+        {!open ? (
+          <div className="flex items-center gap-2">
+            <Button size="sm" variant="outline" onClick={() => setOpen(true)} className="gap-2">
+              <Shield className="h-4 w-4" /> Roles
+            </Button>
+            <Button size="sm" variant="ghost" onClick={() => { setMinimized(true); try { localStorage.setItem('engageiq:adminpanel-minimized','1') } catch { /* ignore */ } }} aria-label="Admin minimized" className="text-xs text-muted-foreground">Minimize</Button>
+          </div>
+        ) : (
+          <div className="flex items-center gap-2">
+            <Button size="sm" variant="outline" onClick={() => setOpen(!open)} className="gap-2">
+              <Shield className="h-4 w-4" /> Roles
+            </Button>
+            <Button size="sm" variant="ghost" onClick={() => setOpen(false)} aria-label="Minimize admin panel">Minimize</Button>
+          </div>
+        )}
       </div>
       {open && (
         <div className="mt-2 w-[420px] max-h-[60vh] overflow-y-auto bg-card border border-border p-3 rounded shadow-lg">

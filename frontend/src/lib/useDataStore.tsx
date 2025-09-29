@@ -3,8 +3,7 @@ import { useState, useEffect, useCallback } from 'react'
 import { useKV } from '@/lib/use-kv'
 // ...existing code...
 import type { UnsyncedPayload } from '@/types/unsynced'
-import { config } from '@/lib/config'
-import databaseService, { initializeDatabase } from '@/lib/database'
+import databaseService from '@/lib/database'
 
 
 // Minimal in-browser id generator (no extra dependency)
@@ -16,7 +15,9 @@ const sharedStore: Map<string, { items: unknown[]; listeners: Set<() => void> }>
 // T must extend UnsyncedPayload for type safety
 export function useDataStore<T = UnsyncedPayload>(key: string, type: import('./database').DatabaseItemType): [T[], (updater: ((prev: T[]) => T[]) | T[]) => void] {
   // All hooks must be called unconditionally
-  const isKV = (config.database.provider as string) === 'kv';
+  // Database provider configuration moved to backend. Frontend persists via
+  // REST API adapter. KV mode is not supported client-side anymore.
+  const isKV = false;
   const kvResult = useKV<T[]>(key, []) as [T[], (updater: ((prev: T[]) => T[]) | T[]) => void];
   const [items, setItems] = useState<T[]>(() => {
     // Initialize from shared store if present to keep instances in sync
@@ -57,11 +58,11 @@ export function useDataStore<T = UnsyncedPayload>(key: string, type: import('./d
     }
   }, [type]);
   useEffect(() => {
-    if (isKV) return;
+  if (isKV) return;
     let cancelled = false;
     async function load() {
       try {
-        await initializeDatabase();
+        // Do not initialize any client-side DB SDK. Use REST API adapter only.
         const dbItems = await databaseService.queryByType(type);
         const data = dbItems.map(i => {
           if (!i || typeof i !== 'object') return undefined

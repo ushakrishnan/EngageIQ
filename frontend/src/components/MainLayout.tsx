@@ -10,7 +10,7 @@ import { LeftSidebar, MobileNavigation } from '@/components/Navigation'
 import { RightSidebar } from '@/components/RightSidebar'
 import { FeedFilters, EmptyFeedState } from '@/components/FeedFilters'
 import { PostCard } from '@/components/PostCard'
-import { DatabaseSetupPrompt } from '@/components/DatabaseSetupPrompt'
+// Database setup is handled server-side. Removed client-side setup prompt.
 import { DailyEngagementWidget } from '@/components/DailyEngagementWidget'
 // Lazy-load heavier/rarely-used widgets to reduce initial bundle size
 const LeaderboardWidget = React.lazy(() => import('@/components/LeaderboardWidget').then(mod => ({ default: mod.LeaderboardWidget })))
@@ -126,7 +126,6 @@ export const MainLayout: React.FC<MainLayoutProps> = ({
 
           <Tabs value={activeTab} onValueChange={setActiveTab}>
             <TabsContent value="feed" className="space-y-4">
-              <DatabaseSetupPrompt />
               
               {/* Mobile Widgets */}
               <div className="lg:hidden space-y-4">

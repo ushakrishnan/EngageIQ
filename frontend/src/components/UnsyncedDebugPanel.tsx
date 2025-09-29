@@ -8,6 +8,9 @@ import type { UnsyncedEntry } from '@/lib/unsynced'
 
 export function UnsyncedDebugPanel() {
   const [open, setOpen] = useState(false)
+  const [minimized, setMinimized] = useState<boolean>(() => {
+    try { return typeof window !== 'undefined' && window.localStorage && window.localStorage.getItem('engageiq:unsynced-minimized') === '1' } catch { return false }
+  })
   type UnsyncedItem = {
     id?: string;
     payload?: unknown;
@@ -97,11 +100,27 @@ export function UnsyncedDebugPanel() {
 
   const count = items.length
 
+  if (minimized) {
+    return (
+      // Positioned on the left side of the page
+      <div className="fixed bottom-4 left-4 z-40">
+        <div className="flex items-center gap-2">
+          <button onClick={() => { setMinimized(false); try { localStorage.setItem('engageiq:unsynced-minimized', '0') } catch { /* ignore */ } }} className="px-3 py-1 rounded bg-card border border-border text-sm shadow flex items-center gap-2">Unsynced ({count})</button>
+        </div>
+      </div>
+    )
+  }
+
   return (
-    <div className="fixed bottom-4 right-4 z-50">
+    <div className="fixed bottom-4 left-4 z-40">
       <div className="flex items-center justify-end">
         <Button size="sm" onClick={() => setOpen(!open)}>
           Unsynced ({count})
+        </Button>
+        <Button size="sm" variant="ghost" onClick={() => { setMinimized(true); try { localStorage.setItem('engageiq:unsynced-minimized','1') } catch { /* ignore */ } }} aria-label="Minimize unsynced">
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
+            <line x1="5" y1="12" x2="19" y2="12" />
+          </svg>
         </Button>
       </div>
       {open && (

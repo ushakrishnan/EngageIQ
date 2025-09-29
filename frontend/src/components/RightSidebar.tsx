@@ -32,7 +32,7 @@ export const RightSidebar: React.FC<RightSidebarProps> = (props) => {
   const { currentUser, users, posts, isUserModerator, activeTab, getUserRank, setIsCreatePostOpen, viewUserProfile, followUser, setIsSearchOpen } = props
   return (
     <aside className="hidden xl:block w-80 flex-shrink-0">
-      <div className="sticky top-20 space-y-4">
+      <div className="space-y-4">
         {/* Current User Profile Card */}
         <Card className="p-4">
           <div className="flex items-center gap-3 mb-4">
@@ -99,6 +99,7 @@ export const RightSidebar: React.FC<RightSidebarProps> = (props) => {
             onOpenSearch={() => setIsSearchOpen(true)}
           />
         )}
+        {/* MessageCenter removed from right sidebar to avoid duplication with Messages panel */}
       </div>
     </aside>
   )
