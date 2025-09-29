@@ -8,3 +8,7 @@ dist/
 .vscode/
 .idea/
 .DS_Store
+
+# Allow example env files to be committed
+!/.env.example
+!/.env.*.example

@@ -28,3 +28,7 @@ dist-ssr
 .env.*
 *.env.local
 .env.local.*
+
+# Allow example env files to be committed
+!/.env.example
+!/.env.*.example

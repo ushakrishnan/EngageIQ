@@ -109,26 +109,43 @@ If you need to run a script that used to live in `frontend/scripts`, look for it
 
 Frontend (Vite): environment variables used in the UI must be prefixed with `VITE_`.
 
-- Example frontend `.env.development` / `.env.production` (place in `frontend/`):
-  - VITE_COSMOS_ENDPOINT
-  - VITE_COSMOS_KEY
-  - VITE_COSMOS_DATABASE_NAME
-  - VITE_COSMOS_CONTAINER_NAME
-  - VITE_APP_NAME
-  - VITE_ENVIRONMENT
-  - VITE_API_BASE_URL
-  - VITE_APP_VERSION
+Current frontend env keys (place in `frontend/.env` or use `.env.development` / `.env.production`):
 
-  NOTE: Do NOT put production secrets (Cosmos keys, AOAI keys, etc.) in these
-  frontend env files. Keep secrets in `backend/.env` or a secrets manager; the
-  frontend should only include non-sensitive, client-exposed values.
+- VITE_APP_NAME           # human-friendly app name shown in UI
+- VITE_ENVIRONMENT        # development | production | staging
+- VITE_ENABLE_ANALYTICS   # true/false (feature flag for analytics)
+- VITE_APP_VERSION        # build/release tag shown in UI
+- VITE_API_BASE_URL       # backend API base URL (e.g. http://localhost:4000)
+- VITE_ADMIN_SERVER_URL   # optional admin server URL used by some admin features
 
-  Important security note: Do NOT store production secrets (Cosmos primary keys,
-  Azure OpenAI keys, or other credentials) in frontend Vite env files. Anything
-  prefixed with `VITE_` is bundled at build time and can be exposed from the
-  client. Keep all secrets in `backend/.env` or a managed secrets store. A
-  sample safe frontend env is provided at `frontend/.env.safe` which lists only
-  non-secret configuration that the client may read.
+Notes and security guidance:
+
+- The frontend intentionally no longer reads or exposes any database provider
+  configuration (Cosmos endpoint/key, database/container names). All
+  database credentials and setup live in the backend. If you see `VITE_COSMOS_*`
+  variables in historical docs or scripts, keep those values only in `backend/.env`.
+
+- DO NOT put production secrets (Cosmos keys, Azure OpenAI keys, etc.) in any
+  `frontend/.env` file. Anything prefixed with `VITE_` is bundled into the
+  client at build time and can be observed by end users.
+
+- A safe example frontend env is included at `frontend/.env.example` (and
+  `frontend/.env` / `.env.development` in this repo) — it lists only non-secret
+  values the client may read.
+
+Example (safe) frontend `.env` snippet:
+
+```bash
+# Application
+VITE_APP_NAME=EngageIQ
+VITE_ENVIRONMENT=development
+VITE_ENABLE_ANALYTICS=false
+VITE_APP_VERSION=dev
+
+# API / Admin server
+VITE_API_BASE_URL=http://localhost:4000
+VITE_ADMIN_SERVER_URL=http://localhost:4000
+```
 
 Backend (server and scripts): put a `.env` file in `backend/` (or set env variables in your environment).
 

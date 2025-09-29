@@ -18,6 +18,12 @@ out/
 *.env.local
 .env.local.*
 
+# Keep real env files ignored but allow example files to be committed
+!frontend/.env.example
+!frontend/.env.*.example
+!backend/.env.example
+!backend/.env.*.example
+
 # Logs
 npm-debug.log*
 yarn-debug.log*
