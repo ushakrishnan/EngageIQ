@@ -147,6 +147,17 @@ VITE_API_BASE_URL=http://localhost:4000
 VITE_ADMIN_SERVER_URL=http://localhost:4000
 ```
 
+Developer note: copy the example to an actual env file before running the app:
+
+```bash
+# from the repo root
+cp frontend/.env.example frontend/.env
+# or on Windows PowerShell:
+Copy-Item frontend\.env.example frontend\.env
+```
+
+Do NOT add production secrets to `frontend/.env`; keep credentials in `backend/.env` or a secrets manager.
+
 Backend (server and scripts): put a `.env` file in `backend/` (or set env variables in your environment).
 
 - Typical backend variables used by scripts and server:
